@@ -45,6 +45,48 @@ const TRIVIA_QUESTIONS = {
       options: ["HTTP", "FTP", "HTTPS", "SMTP"],
       answer: 2,
       explanation: "HTTPS (Hypertext Transfer Protocol Secure) sử dụng mã hóa TLS/SSL để bảo mật dữ liệu truyền giữa trình duyệt và máy chủ."
+    },
+    {
+      question: "Thuật ngữ 'Open Source' (Nguồn mở) lần đầu tiên được đưa ra thảo luận chính thức vào năm nào?",
+      options: ["1998", "1991", "2004", "1985"],
+      answer: 0,
+      explanation: "Thuật ngữ 'Open Source' được tổ chức Open Source Initiative (OSI) chính thức đưa ra vào tháng 2 năm 1998 để quảng bá phần mềm mã nguồn mở."
+    },
+    {
+      question: "Hệ thống quản lý phiên bản Git được tạo ra bởi ai?",
+      options: ["Guido van Rossum", "Linus Torvalds", "Steve Jobs", "Bill Gates"],
+      answer: 1,
+      explanation: "Linus Torvalds (cha đẻ hệ điều hành Linux) đã tạo ra Git vào năm 2005 để quản lý sự phát triển của nhân Linux."
+    },
+    {
+      question: "Cổng mạng (port) mặc định của cơ sở dữ liệu PostgreSQL là cổng nào?",
+      options: ["3306", "5432", "6379", "27017"],
+      answer: 1,
+      explanation: "PostgreSQL sử dụng cổng mặc định là 5432. (3306 là MySQL, 6379 là Redis, 27017 là MongoDB)."
+    },
+    {
+      question: "Định dạng trao đổi dữ liệu phổ biến JSON viết tắt của cụm từ nào?",
+      options: ["Java Source Object Notation", "JavaScript Object Notation", "Jumbo System Object Network", "JavaScript Output Node"],
+      answer: 1,
+      explanation: "JSON viết tắt của JavaScript Object Notation, là định dạng văn bản gọn nhẹ dùng để trao đổi dữ liệu giữa client và server."
+    },
+    {
+      question: "Ai là người đã phát minh ra mạng lưới toàn cầu World Wide Web (WWW) vào năm 1989?",
+      options: ["Tim Berners-Lee", "Vint Cerf", "Marc Andreessen", "Steve Wozniak"],
+      answer: 0,
+      explanation: "Sir Tim Berners-Lee đã phát minh ra World Wide Web (WWW) tại trung tâm nghiên cứu CERN vào năm 1989."
+    },
+    {
+      question: "Trong thiết kế cơ sở dữ liệu quan hệ, cụm từ viết tắt 'SQL' là gì?",
+      options: ["Structured Query Language", "Sequential Query Loop", "System Query Link", "Simple Query Logic"],
+      answer: 0,
+      explanation: "SQL là Structured Query Language (Ngôn ngữ truy vấn cấu trúc), dùng để truy vấn và thao tác trên cơ sở dữ liệu quan hệ."
+    },
+    {
+      question: "Hệ điều hành di động Android của Google được phát triển dựa trên nhân (kernel) nào?",
+      options: ["Windows Kernel", "Linux Kernel", "Darwin (macOS)", "FreeBSD Kernel"],
+      answer: 1,
+      explanation: "Android được xây dựng trên nền tảng nhân Linux (Linux Kernel) được sửa đổi để tối ưu cho thiết bị di động."
     }
   ],
   en: [
@@ -89,6 +131,48 @@ const TRIVIA_QUESTIONS = {
       options: ["HTTP", "FTP", "HTTPS", "SMTP"],
       answer: 2,
       explanation: "HTTPS (Hypertext Transfer Protocol Secure) uses TLS/SSL encryption to secure communications between browser and server."
+    },
+    {
+      question: "In which year was the term 'Open Source' officially coined?",
+      options: ["1998", "1991", "2004", "1985"],
+      answer: 0,
+      explanation: "The term 'Open Source' was officially coined in February 1998 by the Open Source Initiative (OSI) to promote free software."
+    },
+    {
+      question: "Who created the Git version control system in 2005?",
+      options: ["Guido van Rossum", "Linus Torvalds", "Steve Jobs", "Bill Gates"],
+      answer: 1,
+      explanation: "Linus Torvalds, the creator of Linux, developed Git in 2005 to manage the Linux kernel development."
+    },
+    {
+      question: "What is the default port number for a PostgreSQL database server?",
+      options: ["3306", "5432", "6379", "27017"],
+      answer: 1,
+      explanation: "PostgreSQL uses port 5432 by default. (3306 is for MySQL, 6379 is for Redis, and 27017 is for MongoDB)."
+    },
+    {
+      question: "What does the abbreviation JSON stand for?",
+      options: ["Java Source Object Notation", "JavaScript Object Notation", "Jumbo System Object Network", "JavaScript Output Node"],
+      answer: 1,
+      explanation: "JSON stands for JavaScript Object Notation, a lightweight data-interchange format readable by both humans and machines."
+    },
+    {
+      question: "Who is credited with inventing the World Wide Web (WWW) in 1989?",
+      options: ["Tim Berners-Lee", "Vint Cerf", "Marc Andreessen", "Steve Wozniak"],
+      answer: 0,
+      explanation: "Sir Tim Berners-Lee invented the World Wide Web (WWW) at the CERN research facility in 1989."
+    },
+    {
+      question: "In database management, what does the abbreviation 'SQL' stand for?",
+      options: ["Structured Query Language", "Sequential Query Loop", "System Query Link", "Simple Query Logic"],
+      answer: 0,
+      explanation: "SQL stands for Structured Query Language, the standard programming language used to query and manage relational databases."
+    },
+    {
+      question: "Google's Android mobile operating system is built on top of which OS kernel?",
+      options: ["Windows Kernel", "Linux Kernel", "Darwin (macOS)", "FreeBSD Kernel"],
+      answer: 1,
+      explanation: "Android is built on a modified version of the Linux Kernel, customized for mobile devices."
     }
   ]
 };
@@ -97,6 +181,7 @@ export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi' }
   const [activeStep, setActiveStep] = useState(0);
 
   // Trivia states
+  const [questions, setQuestions] = useState([]);
   const [questionIdx, setQuestionIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
@@ -112,7 +197,16 @@ export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi' }
     t('loaderStep6')
   ];
 
-  const questions = TRIVIA_QUESTIONS[lang] || TRIVIA_QUESTIONS['vi'];
+  // Shuffle questions on mount and when language changes
+  useEffect(() => {
+    const pool = TRIVIA_QUESTIONS[lang] || TRIVIA_QUESTIONS['vi'];
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    setQuestions(shuffled);
+    setQuestionIdx(0);
+    setSelectedOption(null);
+    setIsAnswered(false);
+  }, [lang]);
+
   const currentQuestion = questions[questionIdx];
 
   // Auto-progress steps while loading (only if not processed yet)
@@ -142,7 +236,7 @@ export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi' }
   }, [isProcessed, steps.length]);
 
   const handleOptionClick = (optionIdx) => {
-    if (isAnswered) return;
+    if (isAnswered || !currentQuestion) return;
     setSelectedOption(optionIdx);
     setIsAnswered(true);
     setTotalAnswered(prev => prev + 1);
@@ -246,50 +340,58 @@ export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi' }
           </div>
 
           <div className="trivia-body">
-            <h4 className="trivia-question">{currentQuestion.question}</h4>
-            
-            <div className="trivia-options-grid">
-              {currentQuestion.options.map((option, idx) => {
-                let optionClass = '';
-                let icon = null;
+            {currentQuestion ? (
+              <>
+                <h4 className="trivia-question">{currentQuestion.question}</h4>
+                
+                <div className="trivia-options-grid">
+                  {currentQuestion.options.map((option, idx) => {
+                    let optionClass = '';
+                    let icon = null;
 
-                if (isAnswered) {
-                  if (idx === currentQuestion.answer) {
-                    optionClass = 'correct';
-                    icon = <Check size={14} className="option-state-icon" />;
-                  } else if (idx === selectedOption) {
-                    optionClass = 'incorrect';
-                    icon = <X size={14} className="option-state-icon" />;
-                  } else {
-                    optionClass = 'disabled';
-                  }
-                }
+                    if (isAnswered) {
+                      if (idx === currentQuestion.answer) {
+                        optionClass = 'correct';
+                        icon = <Check size={14} className="option-state-icon" />;
+                      } else if (idx === selectedOption) {
+                        optionClass = 'incorrect';
+                        icon = <X size={14} className="option-state-icon" />;
+                      } else {
+                        optionClass = 'disabled';
+                      }
+                    }
 
-                return (
-                  <button 
-                    key={idx} 
-                    className={`trivia-option-btn ${optionClass}`}
-                    onClick={() => handleOptionClick(idx)}
-                    disabled={isAnswered}
-                  >
-                    <span className="option-letter">{String.fromCharCode(65 + idx)}</span>
-                    <span className="option-text">{option}</span>
-                    {icon}
-                  </button>
-                );
-              })}
-            </div>
-
-            {isAnswered && (
-              <div className="trivia-feedback animate-fade-in">
-                <div className="feedback-explanation">
-                  <strong>{lang === 'vi' ? '💡 Giải thích: ' : '💡 Explanation: '}</strong>
-                  {currentQuestion.explanation}
+                    return (
+                      <button 
+                        key={idx} 
+                        className={`trivia-option-btn ${optionClass}`}
+                        onClick={() => handleOptionClick(idx)}
+                        disabled={isAnswered}
+                      >
+                        <span className="option-letter">{String.fromCharCode(65 + idx)}</span>
+                        <span className="option-text">{option}</span>
+                        {icon}
+                      </button>
+                    );
+                  })}
                 </div>
-                <button className="trivia-next-btn btn-secondary" onClick={handleNextQuestion}>
-                  <span>{lang === 'vi' ? 'Câu tiếp theo' : 'Next Question'}</span>
-                  <ArrowRight size={14} />
-                </button>
+
+                {isAnswered && (
+                  <div className="trivia-feedback animate-fade-in">
+                    <div className="feedback-explanation">
+                      <strong>{lang === 'vi' ? '💡 Giải thích: ' : '💡 Explanation: '}</strong>
+                      {currentQuestion.explanation}
+                    </div>
+                    <button className="trivia-next-btn btn-secondary" onClick={handleNextQuestion}>
+                      <span>{lang === 'vi' ? 'Câu tiếp theo' : 'Next Question'}</span>
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="trivia-loading" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
+                {lang === 'vi' ? 'Đang chuẩn bị câu hỏi trắc nghiệm...' : 'Preparing trivia questions...'}
               </div>
             )}
           </div>
