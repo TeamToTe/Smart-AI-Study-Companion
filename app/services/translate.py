@@ -21,7 +21,7 @@ async def _generate_translation_with_retry(
 ) -> dict:
     """
     Attempts to call groq chat completions create for translation up to 3 times.
-    Wait times: 20s after 1st failure, 40s after 2nd failure.
+    Wait times: 60s after 1st failure, 120s after 2nd failure.
     Uses json_object format (standard JSON Mode) under semaphore limit.
     """
     delays = [60.0, 120.0]
@@ -144,6 +144,8 @@ class TranslateService:
         - Preserves technical domain words in English if the source language is not Vietnamese.
         - Restores technical domain words back to English if the source language is already Vietnamese.
         """
+        from app.core.rate_limiter import RedisTokenBucketRateLimiter
+        
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise HTTPException(
@@ -155,12 +157,19 @@ class TranslateService:
         # Limit to 2 concurrent API calls to strictly respect Groq rate limits
         semaphore = asyncio.Semaphore(2)
         
-        # Group segments into batches of 20
+        # Group segments into batches of 10
         batch_size = 10
         batches = [
             transcription.segments[i:i + batch_size] 
             for i in range(0, len(transcription.segments), batch_size)
         ]
+        
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        rate_limiter = RedisTokenBucketRateLimiter(
+            redis_url=redis_url,
+            capacity=30,
+            fill_rate=0.5
+        )
         
         async def process_batch(batch):
             batch_segments = [
@@ -171,6 +180,12 @@ class TranslateService:
                 }
                 for seg in batch
             ]
+            
+            # Acquire token from Redis rate limiter before executing Groq call
+            while not rate_limiter.acquire("groq", tokens_requested=1):
+                logger.warning("Groq API rate limit reached in Redis. Retrying synchronous request in 2 seconds...")
+                await asyncio.sleep(2.0)
+                
             try:
                 res_dict = await _translate_batch_with_fallback(
                     client=client,
