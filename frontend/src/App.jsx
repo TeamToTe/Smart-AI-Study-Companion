@@ -131,6 +131,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('chat');
   const [isDemoMode, setIsDemoMode] = useState(false);
   
+  const [isProcessed, setIsProcessed] = useState(false);
+  const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
+  
   // History & Rate Limit States
   const [history, setHistory] = useState([]);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
@@ -203,6 +206,8 @@ export default function App() {
 
     setUrl(submittedUrl);
     setLoading(true);
+    setIsProcessed(false);
+    setPendingWorkspaceData(null);
     setIsDemoMode(false);
     setSegments([]);
 
@@ -238,7 +243,6 @@ export default function App() {
       const data = await response.json();
       if (data && data.segments && data.segments.length > 0) {
         fetchedSegments = data.segments;
-        setSegments(data.segments);
       } else {
         throw new Error('No segments found');
       }
@@ -247,17 +251,25 @@ export default function App() {
       setIsDemoMode(true);
       const mockSegments = getMockSegmentsForUrl(submittedUrl);
       fetchedSegments = mockSegments;
-      setSegments(mockSegments);
     } finally {
       // Keep loader visible for a minimum of 4 seconds to show the beautiful terminal animation
       setTimeout(() => {
-        setLoading(false);
-        // Add to history once loaded successfully
-        if (fetchedSegments) {
-          addToHistory(submittedUrl, videoTitle);
-        }
+        setIsProcessed(true);
+        setPendingWorkspaceData({
+          url: submittedUrl,
+          title: videoTitle,
+          segments: fetchedSegments
+        });
       }, 4000);
     }
+  };
+
+  const handleLaunchWorkspace = () => {
+    if (pendingWorkspaceData) {
+      setSegments(pendingWorkspaceData.segments);
+      addToHistory(pendingWorkspaceData.url, pendingWorkspaceData.title);
+    }
+    setLoading(false);
   };
 
   const addToHistory = (url, title) => {
@@ -340,7 +352,12 @@ export default function App() {
             t={t} 
           />
         ) : loading ? (
-          <SkeletonLoader t={t} />
+          <SkeletonLoader 
+            t={t} 
+            isProcessed={isProcessed} 
+            onLaunch={handleLaunchWorkspace} 
+            lang={lang} 
+          />
         ) : (
           <div className="workspace-container">
             {/* Top Workspace Bar containing Back Button */}
