@@ -49,7 +49,7 @@ const LOCALIZATION = {
     clearHistory: "Clear All",
     studiedOn: "Studied on",
     rateLimitTitle: "Daily Limit Reached",
-    rateLimitDesc: "To protect API limits, you are limited to 3 new video transcriptions per 24 hours. You can still study any video from your History or try the Example lectures!",
+    rateLimitDesc: "To protect API limits, you are limited to 10 new video transcriptions per 24 hours. You can still study any video from your History or try the Example lectures!",
     close: "Close",
     // Loader Steps
     loaderStep1: "Validating YouTube video details...",
@@ -93,7 +93,7 @@ const LOCALIZATION = {
     clearHistory: "Xóa Tất Cả",
     studiedOn: "Học ngày",
     rateLimitTitle: "Đạt Giới Hạn Sử Dụng",
-    rateLimitDesc: "Để tránh quá tải hạn ngạch (Rate Limit) API của hệ thống, bạn chỉ được dịch tối đa 3 video mới trong vòng 24 giờ. Bạn vẫn có thể học lại các video trong Lịch sử hoặc chọn các bài giảng mẫu!",
+    rateLimitDesc: "Để tránh quá tải hạn ngạch (Rate Limit) API của hệ thống, bạn chỉ được dịch tối đa 10 video mới trong vòng 24 giờ. Bạn vẫn có thể học lại các video trong Lịch sử hoặc chọn các bài giảng mẫu!",
     close: "Đóng",
     // Loader Steps
     loaderStep1: "Đang xác thực thông tin liên kết YouTube...",
@@ -167,9 +167,15 @@ export default function App() {
 
   // 4. Rate Limiting Check
   const checkRateLimit = (submittedUrl) => {
-    // PREVENT RATE LIMITING FOR PRE-CONFIGURED SAMPLES (So judges/users can test freely)
+    // 1. Bypass rate limit completely on Localhost for development/testing
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return true;
+    }
+
+    // 2. PREVENT RATE LIMITING FOR PRE-CONFIGURED SAMPLES & HISTORY (Already processed)
     const isExample = EXAMPLES.some(ex => ex.url.toLowerCase() === submittedUrl.toLowerCase());
-    if (isExample) return true;
+    const isHistory = history.some(item => item.url.toLowerCase() === submittedUrl.toLowerCase());
+    if (isExample || isHistory) return true;
 
     const savedTimestamps = localStorage.getItem('studymind_request_timestamps');
     let timestamps = [];
@@ -185,8 +191,9 @@ export default function App() {
     // Filter out timestamps older than 24 hours
     const activeTimestamps = timestamps.filter(t => t > oneDayAgo);
 
-    if (activeTimestamps.length >= 3) {
-      // Hit rate limit (3 requests per day max)
+    // 3. Raise limit to 10 for public testing since we now have 6 rotated API keys!
+    if (activeTimestamps.length >= 10) {
+      // Hit rate limit (10 requests per day max)
       setShowRateLimitModal(true);
       return false;
     }
