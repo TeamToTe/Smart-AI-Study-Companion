@@ -146,11 +146,12 @@ class TranslateService:
         """
         from app.core.rate_limiter import RedisTokenBucketRateLimiter
         
-        api_key = os.getenv("GROQ_API_KEY")
+        from app.core.key_rotation import get_groq_api_key
+        api_key = get_groq_api_key()
         if not api_key:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Groq API Key is not configured on the server. Please set GROQ_API_KEY in the environment."
+                detail="Groq API Key is not configured on the server. Please set GROQ_API_KEY or GROQ_API_KEYS in the environment."
             )
             
         client = AsyncGroq(api_key=api_key)
