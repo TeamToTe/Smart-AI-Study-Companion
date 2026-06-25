@@ -1,0 +1,220 @@
+/* MindmapKit.css */
+.mindmap-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  padding: 8px;
+}
+
+.mindmap-scroll-area {
+  width: 100%;
+  overflow-x: auto;
+  padding: 16px 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  min-height: 250px;
+}
+
+.mindmap-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 480px;
+}
+
+.mindmap-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.root-column {
+  align-items: center;
+  position: relative;
+}
+
+.root-column::after {
+  content: '';
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  width: 2px;
+  height: 16px;
+  background: var(--border-color);
+}
+
+.mindmap-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  padding-top: 8px;
+}
+
+.mindmap-branch-group {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 32px;
+  align-items: center;
+  position: relative;
+}
+
+.mindmap-branch-group::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 50%;
+  width: 20px;
+  height: 2px;
+  background: var(--border-color);
+}
+
+/* Nodes styling */
+.mindmap-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  outline: none;
+}
+
+.mindmap-node:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md), var(--shadow-glow-blue);
+}
+
+.mindmap-node.selected {
+  border-color: var(--color-accent);
+  background: rgba(59, 130, 246, 0.08);
+  box-shadow: var(--shadow-md), var(--shadow-glow-blue);
+  font-weight: 700;
+}
+
+/* Specific nodes styles */
+.root-node {
+  background: var(--gradient-accent);
+  color: #ffffff;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 12px 18px;
+  border-radius: 10px;
+}
+
+.root-node:hover {
+  border-color: transparent;
+  box-shadow: var(--shadow-lg), var(--shadow-glow-blue);
+}
+
+.root-node.selected {
+  background: var(--gradient-accent);
+  box-shadow: var(--shadow-lg), var(--shadow-glow-blue);
+}
+
+.node-icon {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.level-1 {
+  align-items: stretch;
+}
+
+.level-2-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.leaf-node {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.leaf-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast);
+}
+
+.leaf-node:hover .leaf-dot,
+.leaf-node.selected .leaf-dot {
+  background: var(--color-accent);
+  box-shadow: var(--shadow-glow-blue);
+}
+
+/* Node details box */
+.node-details-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn var(--transition-normal) forwards;
+}
+
+.node-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 8px;
+}
+
+.node-details-header h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.theme-light .node-details-header h4 {
+  color: #0f172a;
+}
+
+.play-node-btn {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  height: 24px;
+}
+
+.node-desc {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.info-icon {
+  margin-top: 3px;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.mindmap-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+}
