@@ -23,22 +23,32 @@ The easiest way to run the entire stack (FastAPI, Redis, and Celery):
 
 ---
 
-## 🛠️ Alternative Local Setup
+## 🛠️ Local Setup using NPM Scripts
 
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
+If you want to run the project locally on your host machine, we provide convenient root NPM scripts to automate installation and startup:
+
+1. **Configure Environment**:
+   Create a `.env` file in the root directory:
+   ```env
+   GEMINI_API_KEY="your-gemini-api-key"
+   GROQ_API_KEY="your-groq-api-key"
    ```
 
-2. **Start FastAPI**:
+2. **Automated Setup**:
+   Run this once to install root tools, frontend packages, and python requirements in `.venv`:
    ```bash
-   uvicorn app.main:app --reload
+   npm run setup
    ```
 
-3. **Start Celery Worker**:
-   ```bash
-   celery -A app.core.celery_app worker --loglevel=info
-   ```
+3. **Run Services**:
+   * **Frontend & Backend API only** (Lightweight development, Celery/Redis not required):
+     ```bash
+     npm run dev
+     ```
+   * **Full Stack with Celery background worker** (requires Redis to be running, e.g. via `docker compose up redis -d`):
+     ```bash
+     npm run fullstack
+     ```
 
 ---
 
