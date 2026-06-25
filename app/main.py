@@ -1,5 +1,11 @@
+import logging
 from fastapi import FastAPI
 from app.api.transcribe import router as transcribe_router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 app = FastAPI(
     title="YouTube Transcription API",
@@ -14,3 +20,7 @@ app.include_router(transcribe_router, prefix="/api")
 def health_check():
     """Simple health check endpoint."""
     return {"status": "healthy"}
+
+@app.get("/hello", tags=["health"])
+def hello():
+    return {"hello" : "world"}
