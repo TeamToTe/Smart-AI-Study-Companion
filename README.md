@@ -1,31 +1,50 @@
 # Smart AI Study Companion
 
-A FastAPI application that extracts transcripts/subtitles from YouTube videos (using subtitles or Gemini Speech-to-Text fallback) and translates them into Vietnamese while preserving core technical domain terms in English.
+An AI-powered service that extracts transcripts from YouTube videos and translates them into Vietnamese while preserving standard English technical terms (ML, CS, Data Science).
 
-## 1. Setup
+## 🚀 Quick Start (Docker Compose)
 
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+The easiest way to run the entire stack (FastAPI, Redis, and Celery):
 
-2. **Configure Environment Variables**:
+1. **Configure Environment**:
    Create a `.env` file in the root directory:
    ```env
    GEMINI_API_KEY="your-gemini-api-key"
    GROQ_API_KEY="your-groq-api-key"
    ```
 
-## 2. Running the Server
+2. **Start Services**:
+   ```bash
+   docker compose up --build
+   ```
 
-Start the local development server:
-```bash
-uvicorn app.main:app --reload
-```
-Once running, you can access the interactive API documentation at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+3. **Explore**:
+   Open [http://localhost:8000/docs](http://localhost:8000/docs) to view and test the API endpoints.
 
-## 3. Main Endpoints
+---
 
-- **`POST /api/transcriptions`**: Retrieves the transcript of a YouTube video. Attempts to download official subtitles first (via `yt-dlp`), falling back to Gemini Speech-to-Text if subtitles are unavailable.
-- **`POST /api/transcriptions/gemini`**: Direct transcription from audio using Gemini Speech-to-Text.
-- **`POST /api/transcriptions/translate`**: Translates segment lists to Vietnamese, keeping computer science and machine learning terms in English.
+## 🛠️ Alternative Local Setup
+
+1. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Start FastAPI**:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+3. **Start Celery Worker**:
+   ```bash
+   celery -A app.core.celery_app worker --loglevel=info
+   ```
+
+---
+
+## 📡 Key Endpoints
+
+- **`POST /api/transcriptions`**: Fetch YouTube transcript. Tries subtitles first, falls back to Gemini STT.
+- **`POST /api/transcriptions/translate`**: Translate segment list to Vietnamese (technical terms preserved in English).
+- **`POST /api/transcriptions/async`**: Enqueue asynchronous background transcript & translation workflow (returns `task_id`).
+- **`GET /api/tasks/{task_id}`**: Get status and results of a background task.

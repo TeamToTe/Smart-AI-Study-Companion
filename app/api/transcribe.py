@@ -1,5 +1,9 @@
 from fastapi import APIRouter, Depends, status
+from celery import chain
+from celery.result import AsyncResult
 
+from app.core.celery_app import celery_app
+from app.tasks.transcription_tasks import get_transcript_task, orchestrate_translation_task
 from app.schemas.transcription import TranscriptionRequest, TranscriptionResponse
 from app.schemas.translation import TranslationResponse
 from app.services.transcription import TranscriptionService, get_transcription_service
@@ -57,5 +61,49 @@ async def translate_transcript(
     restoring English domain/technical words.
     """
     return await service.translate_to_vietnamese(payload)
+
+
+@router.post(
+    "/transcriptions/async",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Asynchronously transcribe and translate YouTube video",
+    description="Submits a YouTube video URL for background transcription and translation to Vietnamese.",
+)
+def start_async_transcription(payload: TranscriptionRequest):
+    """
+    Submits a YouTube URL. Returns a task ID to poll for status.
+    """
+    workflow = chain(
+        get_transcript_task.s(payload.url),
+        orchestrate_translation_task.s()
+    )
+    task_result = workflow.apply_async()
+    return {"task_id": task_result.id, "status": "PENDING"}
+
+
+@router.get(
+    "/tasks/{task_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get status and results of a transcription task",
+)
+def get_task_status(task_id: str):
+    """
+    Checks the status of a Celery background task by ID.
+    """
+    res = AsyncResult(task_id, app=celery_app)
+    
+    response_data = {
+        "task_id": task_id,
+        "status": res.state,
+        "result": None
+    }
+    
+    if res.state == "SUCCESS":
+        response_data["result"] = res.result
+    elif res.state == "FAILURE":
+        response_data["result"] = {"error": str(res.result)}
+        
+    return response_data
+
 
 
