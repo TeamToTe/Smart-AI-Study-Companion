@@ -87,11 +87,12 @@ class GeminiTranscriptionService:
         Transcribes a YouTube video by downloading its audio and sending it to Gemini Speech-to-Text.
         Uses the official google-genai SDK, featuring retries and fallback to Gemini 2.5 Flash Lite.
         """
-        api_key = os.getenv("GEMINI_API_KEY")
+        from app.core.key_rotation import get_gemini_api_key
+        api_key = get_gemini_api_key()
         if not api_key:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Gemini API Key is not configured on the server. Please set GEMINI_API_KEY in the environment."
+                detail="Gemini API Key is not configured on the server. Please set GEMINI_API_KEY or GEMINI_API_KEYS in the environment."
             )
             
         local_file_path = None

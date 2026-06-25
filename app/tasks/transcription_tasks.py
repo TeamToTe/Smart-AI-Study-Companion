@@ -44,9 +44,10 @@ def translate_batch_task(self, batch_segments: list, lang: str) -> list:
         logger.info("Groq API rate limit reached in Redis. Retrying translation task in 5 seconds...")
         raise self.retry(countdown=5)
 
-    api_key = os.getenv("GROQ_API_KEY")
+    from app.core.key_rotation import get_groq_api_key
+    api_key = get_groq_api_key()
     if not api_key:
-        raise ValueError("GROQ_API_KEY is not configured in the environment")
+        raise ValueError("GROQ_API_KEY is not configured in the environment (neither GROQ_API_KEY nor GROQ_API_KEYS)")
 
     async def run_translation():
         client = AsyncGroq(api_key=api_key)
