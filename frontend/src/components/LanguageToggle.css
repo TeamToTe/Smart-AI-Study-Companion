@@ -1,0 +1,52 @@
+/* LanguageToggle.css */
+.lang-toggle-container {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  position: relative;
+  padding: 2px;
+  height: 40px;
+  width: 90px;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+}
+
+.lang-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 2;
+  transition: color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lang-btn.active {
+  color: #ffffff;
+}
+
+.lang-slider {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: calc(50% - 2px);
+  background: var(--gradient-accent);
+  border-radius: 18px;
+  z-index: 1;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.lang-slider.active-en {
+  transform: translateX(0);
+}
+
+.lang-slider.active-vi {
+  transform: translateX(100%);
+}
