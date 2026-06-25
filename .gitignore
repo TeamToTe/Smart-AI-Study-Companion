@@ -1,6 +1,10 @@
 .vscode/
-__pycache__/
-*.pyc
 .env
 .venv/
 .venv
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ipynb_checkpoints/
+tests/
