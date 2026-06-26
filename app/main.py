@@ -1,6 +1,7 @@
 import logging
 from fastapi import FastAPI
 from app.api.transcribe import router as transcribe_router
+from app.api.chat import router as chat_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -13,8 +14,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Include the transcription router with prefix
+# Include the routers with prefix
 app.include_router(transcribe_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
 
 @app.get("/health", tags=["health"])
 def health_check():
