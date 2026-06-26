@@ -177,7 +177,7 @@ const TRIVIA_QUESTIONS = {
   ]
 };
 
-export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi' }) {
+export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi', progress = 0 }) {
   const [activeStep, setActiveStep] = useState(0);
 
   // Trivia states
@@ -209,31 +209,25 @@ export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi' }
 
   const currentQuestion = questions[questionIdx];
 
-  // Auto-progress steps while loading (only if not processed yet)
+  // Map progress (0-100) to steps (0-5)
   useEffect(() => {
     if (isProcessed) {
       setActiveStep(steps.length - 1);
       return;
     }
-
-    const timer = setInterval(() => {
-      setActiveStep((prev) => {
-        if (prev < steps.length - 1) {
-          return prev + 1;
-        }
-        return prev;
-      });
-    }, 3500);
-
-    return () => clearInterval(timer);
-  }, [steps.length, isProcessed]);
-
-  // If processed, instantly complete steps
-  useEffect(() => {
-    if (isProcessed) {
-      setActiveStep(steps.length - 1);
-    }
-  }, [isProcessed, steps.length]);
+    
+    const getActiveStep = (prog) => {
+      if (prog >= 100) return 5;
+      if (prog >= 85) return 5;
+      if (prog >= 50) return 4;
+      if (prog >= 35) return 3;
+      if (prog >= 30) return 2;
+      if (prog >= 15) return 1;
+      return 0;
+    };
+    
+    setActiveStep(getActiveStep(progress));
+  }, [progress, isProcessed, steps.length]);
 
   const handleOptionClick = (optionIdx) => {
     if (isAnswered || !currentQuestion) return;
@@ -269,7 +263,7 @@ export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi' }
             </div>
           )}
           <span className="loader-percentage">
-            {isProcessed ? '100%' : `${Math.min(Math.round(((activeStep + 1) / steps.length) * 100), 100)}%`}
+            {isProcessed ? '100%' : `${progress}%`}
           </span>
         </div>
 
@@ -277,7 +271,7 @@ export default function SkeletonLoader({ t, isProcessed, onLaunch, lang = 'vi' }
         <div className="progress-bar-container">
           <div 
             className="progress-bar" 
-            style={{ width: isProcessed ? '100%' : `${((activeStep + 1) / steps.length) * 100}%` }}
+            style={{ width: isProcessed ? '100%' : `${progress}%` }}
           />
         </div>
 
