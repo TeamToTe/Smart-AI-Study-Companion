@@ -9,7 +9,7 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang }) {
+export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc }) {
   const [activeIdx, setActiveIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(true);
   const [hoveredTerm, setHoveredTerm] = useState(null);
@@ -38,12 +38,25 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang 
     }
   }, [currentTime, segments, activeIdx]);
 
-  // 2. Smoothly scroll active line into view
+  // 2. Smoothly scroll active line into view (inside the container only)
   useEffect(() => {
     if (autoScroll && activeLineRef.current && containerRef.current) {
-      activeLineRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
+      const container = containerRef.current;
+      const activeLine = activeLineRef.current;
+      
+      const containerHeight = container.clientHeight;
+      
+      // Calculate coordinates relative to container's viewport
+      const containerRect = container.getBoundingClientRect();
+      const activeLineRect = activeLine.getBoundingClientRect();
+      
+      // relativeTop is the absolute offset of activeLine from container's scroll top
+      const relativeTop = activeLineRect.top - containerRect.top + container.scrollTop;
+      const targetScrollTop = relativeTop - (containerHeight / 2) + (activeLineRect.height / 2);
+      
+      container.scrollTo({
+        top: targetScrollTop,
+        behavior: 'smooth'
       });
     }
   }, [activeIdx, autoScroll]);
@@ -109,7 +122,14 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang 
           <ShieldCheck size={18} className="shield-icon" />
           <span>{t('academicEntityProtection')}</span>
         </div>
-        <div className="toolbar-controls">
+        <div className="toolbar-controls" style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            className={`sync-btn btn-secondary ${videoOverlayCc ? 'active' : ''}`}
+            onClick={() => setVideoOverlayCc(!videoOverlayCc)}
+            title="Toggle Subtitles Overlay on Video"
+          >
+            {t('videoOverlayCc')}: {videoOverlayCc ? 'ON' : 'OFF'}
+          </button>
           <button 
             className={`sync-btn btn-secondary ${autoScroll ? 'active' : ''}`}
             onClick={() => setAutoScroll(!autoScroll)}
@@ -140,13 +160,12 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang 
                 <div className="subtitle-content">
                   {/* Original English Text (Entity-Protected) */}
                   <p className="sub-text-en">
-                    {renderHighlightedText(seg.text)}
+                    {renderHighlightedText(seg.original_text || seg.text)}
                   </p>
                   {/* Vietnamese Context-aware Translation */}
                   {lang === 'vi' && (
                     <p className="sub-text-vi">
-                      {/* Subtitle translation logic - we will mock context-aware translations */}
-                      {getMockTranslation(seg.text)}
+                      {seg.original_text ? seg.text : getMockTranslation(seg.text)}
                     </p>
                   )}
                 </div>

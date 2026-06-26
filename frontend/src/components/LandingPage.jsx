@@ -23,18 +23,35 @@ const Youtube = ({ size = 24, className }) => (
 
 export default function LandingPage({ onSubmit, history, onDeleteHistory, onClearHistory, examples, t }) {
   const [url, setUrl] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [error, setError] = useState('');
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    if (url.trim()) {
-      onSubmit(url.trim());
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) return;
+
+    // YouTube URL validation regex
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)\/(watch\?v=|embed\/|v\/|.+\?v=)?([^&=%\?]{11})/;
+    if (!youtubeRegex.test(trimmedUrl)) {
+      setError(t('invalidUrl'));
+      return;
     }
+
+    setError('');
+    onSubmit(trimmedUrl);
   };
 
   const handleExampleClick = (exampleUrl) => {
     setUrl(exampleUrl);
+    setError('');
     onSubmit(exampleUrl);
   };
+
+  const itemsPerPage = 6;
+  const totalPages = Math.ceil((history || []).length / itemsPerPage);
+  const activePage = Math.min(currentPage, Math.max(1, totalPages));
+  const displayedHistory = (history || []).slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
   return (
     <div className="landing-container animate-fade-in">
@@ -58,7 +75,10 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
             type="text"
             placeholder={t('inputPlaceholder')}
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              if (error) setError('');
+            }}
             className="url-input"
             required
           />
@@ -68,6 +88,12 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
           </button>
         </div>
       </form>
+
+      {error && (
+        <div className="url-error-msg animate-fade-in" style={{ color: 'var(--color-danger)', fontSize: '13px', fontWeight: '600', marginTop: '-12px', marginBottom: '24px', textAlign: 'center' }}>
+          {error}
+        </div>
+      )}
 
       <div className="examples-section">
         <p className="examples-title">{t('tryTheseExamples')}</p>
@@ -96,7 +122,7 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
             </button>
           </div>
           <div className="history-grid">
-            {history.map((item, idx) => {
+            {displayedHistory.map((item, idx) => {
               // Extract YouTube video ID
               const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
               const match = item.url.match(regExp);
@@ -136,6 +162,31 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
               );
             })}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination-controls-container">
+              <button 
+                className="pagination-btn" 
+                disabled={activePage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                type="button"
+              >
+                {t('prev')}
+              </button>
+              <span className="pagination-indicator">
+                {activePage} / {totalPages}
+              </span>
+              <button 
+                className="pagination-btn" 
+                disabled={activePage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                type="button"
+              >
+                {t('next')}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

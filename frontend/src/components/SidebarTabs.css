@@ -7,8 +7,16 @@
   border: 1px solid var(--border-color);
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  height: 500px;
+  height: calc(100vh - 180px);
+  min-height: 500px;
+  max-height: 850px;
   transition: background-color var(--transition-normal), border-color var(--transition-normal);
+}
+
+@media (max-width: 1024px) {
+  .sidebar-tabs-container {
+    height: 600px;
+  }
 }
 
 .tabs-header-bar {
@@ -51,6 +59,8 @@
 
 .tab-content-wrapper {
   flex: 1;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 16px;
 }
