@@ -18,7 +18,6 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
   const wrapperRef = useRef(null);
   const [apiReady, setApiReady] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [playPauseState, setPlayPauseState] = useState(null); // 'play', 'pause', or null
 
   // Identify active segment for overlay subtitles
   const activeSegment = (showOverlay && segments && segments.length > 0)
@@ -64,25 +63,6 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
         iframe.setAttribute('allow', updatedAllow);
       }
     }
-  };
-
-  // Custom play/pause toggle when clicking the interceptor overlay
-  const handleOverlayClick = () => {
-    if (!playerRef.current || typeof playerRef.current.getPlayerState !== 'function') return;
-
-    const state = playerRef.current.getPlayerState();
-    if (state === window.YT.PlayerState.PLAYING) {
-      playerRef.current.pauseVideo();
-      setPlayPauseState('pause');
-    } else {
-      playerRef.current.playVideo();
-      setPlayPauseState('play');
-    }
-
-    // Reset indicator after animation duration
-    setTimeout(() => {
-      setPlayPauseState(null);
-    }, 800);
   };
 
   // 1. Load YouTube IFrame API dynamically
@@ -211,29 +191,6 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
       <div className="player-aspect-ratio">
         <div id={containerId}></div>
       </div>
-
-      {/* Click and double-click interceptor overlay for custom play/pause and fullscreen */}
-      <div 
-        className="video-overlay-interceptor" 
-        onClick={handleOverlayClick}
-        onDoubleClick={toggleFullscreen}
-      ></div>
-
-      {/* Animated Center Play/Pause Indicator */}
-      {playPauseState && (
-        <div className={`play-pause-indicator ${playPauseState}`}>
-          {playPauseState === 'play' ? (
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="white" className="indicator-icon">
-              <polygon points="5 3 19 12 5 21 5 3" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="white" className="indicator-icon">
-              <rect x="6" y="4" width="4" height="16" />
-              <rect x="14" y="4" width="4" height="16" />
-            </svg>
-          )}
-        </div>
-      )}
 
       <button className="fullscreen-btn" onClick={toggleFullscreen} title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}>
         {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}

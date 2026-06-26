@@ -122,7 +122,7 @@ class GeminiTranscriptionService:
             
             contents = [
                 uploaded_file,
-                "Please transcribe the entire audio file. Provide accurate start and end timestamps (in seconds) for each segment."
+                "Please transcribe the entire audio file verbatim. For each spoken phrase, provide the exact start and end timestamps in seconds (as floats, e.g. 12.34). Keep segments short (around 5 to 10 seconds each). Ensure the timestamps match the actual audio timeline precisely and do not drift or accumulate errors as time progresses."
             ]
             
             # Run the primary-then-fallback pipeline up to 3 times total

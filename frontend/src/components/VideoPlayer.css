@@ -30,9 +30,9 @@
 
 .caption-en {
   color: #ffffff;
-  font-size: 13.5px;
+  font-size: 18px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
   margin: 0;
   text-shadow: 
     -1px -1px 0 rgba(0, 0, 0, 0.85),  
@@ -44,9 +44,9 @@
 
 .caption-vi {
   color: #38bdf8;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.4;
   margin: 0;
   text-shadow: 
     -1px -1px 0 rgba(0, 0, 0, 0.85),  
@@ -67,71 +67,22 @@
   }
 }
 
-/* Custom Play/Pause and Fullscreen Interceptor */
-.video-overlay-interceptor {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: calc(100% - 48px); /* Exclude bottom 48px to allow YouTube controls interaction */
-  z-index: 8;
-  background: transparent;
-  cursor: pointer;
-}
-
-/* Play/Pause Central Indicator Animation */
-.play-pause-indicator {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 16px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 15;
-  animation: playPauseFade 0.8s ease-out forwards;
-}
-
-@keyframes playPauseFade {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.7);
-  }
-  30% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.0);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(1.2);
-  }
-}
-
-/* Custom Fullscreen Button Styling */
+/* Custom Fullscreen Button Styling (Bottom Right) */
 .fullscreen-btn {
   position: absolute;
-  top: 12px;
+  bottom: 48px; /* Slightly above the very bottom to avoid native YouTube hover controls */
   right: 12px;
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
-  padding: 8px;
-  border-radius: 50%;
+  padding: 6px 8px;
+  border-radius: 6px;
   cursor: pointer;
   z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 0.6;
   transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -164,11 +115,11 @@
 }
 
 .video-player-wrapper.fullscreen .caption-en {
-  font-size: 16.5px;
+  font-size: 24px;
 }
 
 .video-player-wrapper.fullscreen .caption-vi {
-  font-size: 14.5px;
+  font-size: 22px;
 }
 
 .player-aspect-ratio {
