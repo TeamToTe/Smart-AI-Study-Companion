@@ -233,9 +233,10 @@ export default function App() {
       videoTitle = `Lecture Video [${videoId}]`;
     }
 
+    const startTime = Date.now();
     try {
-      // Connect to FastAPI backend endpoint
-      const response = await fetch('/api/transcriptions', {
+      // Connect to FastAPI backend async endpoint
+      const response = await fetch('/api/transcriptions/async', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -248,10 +249,39 @@ export default function App() {
       }
 
       const data = await response.json();
-      if (data && data.segments && data.segments.length > 0) {
-        fetchedSegments = data.segments;
+      const taskId = data.task_id;
+      if (!taskId) {
+        throw new Error('No task ID returned by backend');
+      }
+
+      // Poll task status
+      let taskCompleted = false;
+      let taskResult = null;
+      const pollInterval = 2000; // Poll every 2 seconds
+      
+      while (!taskCompleted) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        
+        const statusResponse = await fetch(`/api/tasks/${taskId}`);
+        if (!statusResponse.ok) {
+          throw new Error('Failed to fetch task status');
+        }
+        
+        const statusData = await statusResponse.json();
+        if (statusData.status === 'SUCCESS') {
+          taskCompleted = true;
+          taskResult = statusData.result;
+        } else if (statusData.status === 'FAILURE') {
+          throw new Error(statusData.result?.error || 'Task failed on backend');
+        } else if (statusData.status === 'REVOKED') {
+          throw new Error('Task was cancelled');
+        }
+      }
+
+      if (taskResult && taskResult.segments && taskResult.segments.length > 0) {
+        fetchedSegments = taskResult.segments;
       } else {
-        throw new Error('No segments found');
+        throw new Error('No segments found in task result');
       }
     } catch (err) {
       console.warn('Backend API request failed. Falling back to frontend mock data for demo.', err);
@@ -260,6 +290,10 @@ export default function App() {
       fetchedSegments = mockSegments;
     } finally {
       // Keep loader visible for a minimum of 4 seconds to show the beautiful terminal animation
+      const elapsed = Date.now() - startTime;
+      const minDuration = 4000;
+      const remainingTime = Math.max(0, minDuration - elapsed);
+      
       setTimeout(() => {
         setIsProcessed(true);
         setPendingWorkspaceData({
@@ -267,7 +301,7 @@ export default function App() {
           title: videoTitle,
           segments: fetchedSegments
         });
-      }, 4000);
+      }, remainingTime);
     }
   };
 
