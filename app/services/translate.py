@@ -208,12 +208,14 @@ class TranslateService:
                 )
                 
                 parsed_segs = []
-                for seg in res_dict.get("segments", []):
+                for i, seg in enumerate(res_dict.get("segments", [])):
+                    orig_text = batch[i].text if i < len(batch) else ""
                     parsed_segs.append(
                         TranslationSegment(
                             start=seg.get("start", 0.0),
                             end=seg.get("end", 0.0),
                             text=seg.get("text", ""),
+                            original_text=orig_text,
                             domain_words=seg.get("domain_words", [])
                         )
                     )

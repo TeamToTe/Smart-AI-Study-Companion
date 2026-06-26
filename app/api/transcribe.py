@@ -71,8 +71,26 @@ async def translate_transcript(
 )
 def start_async_transcription(payload: TranscriptionRequest):
     """
-    Submits a YouTube URL. Returns a task ID to poll for status.
+    Submits a YouTube URL. Returns a task ID to poll for status, checking for cached responses first.
     """
+    import os
+    import re
+    
+    # Extract video_id to check cache
+    url = payload.url
+    reg = r"^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*"
+    match = re.match(reg, url)
+    video_id = match.group(2) if match and len(match.group(2)) == 11 else None
+    
+    if video_id:
+        cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
+        cache_file = os.path.join(cache_dir, f"{video_id}.json")
+        if os.path.exists(cache_file):
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Cache hit for video {video_id}. Returning cached task.")
+            return {"task_id": f"cached_{video_id}", "status": "SUCCESS"}
+
     import uuid
     orchestrate_task_id = str(uuid.uuid4())
     get_transcript_task_id = str(uuid.uuid4())
@@ -106,7 +124,39 @@ def start_async_transcription(payload: TranscriptionRequest):
 def get_task_status(task_id: str):
     """
     Checks the status of a Celery background task by ID.
+    If the task ID corresponds to a cached video, serves the cache directly.
     """
+    import os
+    import json
+    
+    # Check if task is a cached hit
+    if task_id.startswith("cached_"):
+        video_id = task_id.replace("cached_", "")
+        cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
+        cache_file = os.path.join(cache_dir, f"{video_id}.json")
+        
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    cached_data = json.load(f)
+                return {
+                    "task_id": task_id,
+                    "status": "SUCCESS",
+                    "progress": 100,
+                    "result": cached_data
+                }
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error reading cache file {cache_file}: {e}")
+                
+        return {
+            "task_id": task_id,
+            "status": "FAILURE",
+            "progress": 0,
+            "result": {"error": "Cache file not found or corrupted"}
+        }
+
     res = AsyncResult(task_id, app=celery_app)
     
     # Try to fetch progress and time measurement from Redis
