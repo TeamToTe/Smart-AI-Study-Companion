@@ -328,6 +328,14 @@ export default function App() {
     setSegments([]);
     setProgress(0);
 
+    // Redirect to /video immediately so user sees the progress screen from 0%
+    const searchParams = new URLSearchParams(window.location.search);
+    const currentV = searchParams.get('v');
+    if (window.location.pathname !== '/video' || currentV !== submittedUrl) {
+      window.history.pushState({}, '', `/video?v=${encodeURIComponent(submittedUrl)}`);
+    }
+    setCurrentPath('/video');
+
     let fetchedSegments = null;
     let videoTitle = "Video Lecture";
     let demoIntervalId = null;
@@ -429,9 +437,6 @@ export default function App() {
           title: videoTitle,
           segments: fetchedSegments
         });
-        // Sync URL query parameters & Route to /video
-        window.history.pushState({}, '', `/video?v=${encodeURIComponent(submittedUrl)}`);
-        setCurrentPath('/video');
       }, remainingTime);
     }
   };
