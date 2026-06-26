@@ -289,6 +289,37 @@ export default function App() {
       return;
     }
 
+    // Check frontend localStorage cache first
+    const cachedSegmentsStr = localStorage.getItem(`studymind_cache_segments_${submittedUrl.toLowerCase()}`);
+    if (cachedSegmentsStr) {
+      try {
+        const cachedSegments = JSON.parse(cachedSegmentsStr);
+        if (cachedSegments && cachedSegments.length > 0) {
+          const matchedExample = EXAMPLES.find(ex => ex.url.toLowerCase() === submittedUrl.toLowerCase());
+          let videoTitle = "Video Lecture";
+          if (matchedExample) {
+            videoTitle = matchedExample.title;
+          } else {
+            const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = submittedUrl.match(reg);
+            const videoId = match ? match[2] : "ID";
+            videoTitle = `Lecture Video [${videoId}]`;
+          }
+
+          setUrl(submittedUrl);
+          setSegments(cachedSegments);
+          setLoading(false);
+          setIsProcessed(true);
+          window.history.pushState({}, '', `/video?v=${encodeURIComponent(submittedUrl)}`);
+          setCurrentPath('/video');
+          addToHistory(submittedUrl, videoTitle);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse cached segments:", e);
+      }
+    }
+
     setUrl(submittedUrl);
     setLoading(true);
     setIsProcessed(false);
@@ -409,6 +440,15 @@ export default function App() {
     if (pendingWorkspaceData) {
       setSegments(pendingWorkspaceData.segments);
       addToHistory(pendingWorkspaceData.url, pendingWorkspaceData.title);
+      // Cache segments in frontend localStorage
+      try {
+        localStorage.setItem(
+          `studymind_cache_segments_${pendingWorkspaceData.url.toLowerCase()}`,
+          JSON.stringify(pendingWorkspaceData.segments)
+        );
+      } catch (e) {
+        console.error("Failed to cache segments in localStorage:", e);
+      }
     }
     setLoading(false);
   };
@@ -439,10 +479,18 @@ export default function App() {
       localStorage.setItem('studymind_history', JSON.stringify(updated));
       return updated;
     });
+    localStorage.removeItem(`studymind_cache_segments_${urlToDelete.toLowerCase()}`);
   };
 
   const clearHistory = () => {
     localStorage.removeItem('studymind_history');
+    // Clear all cached segments keys
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('studymind_cache_segments_')) {
+        localStorage.removeItem(key);
+      }
+    }
     setHistory([]);
   };
 
