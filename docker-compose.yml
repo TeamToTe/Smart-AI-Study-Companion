@@ -14,6 +14,8 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app
     env_file:
       - .env
     environment:
@@ -28,6 +30,8 @@ services:
       dockerfile: Dockerfile
     container_name: transcription_worker
     command: celery -A app.core.celery_app worker --loglevel=info
+    volumes:
+      - .:/app
     env_file:
       - .env
     environment:

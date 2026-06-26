@@ -73,12 +73,19 @@ def start_async_transcription(payload: TranscriptionRequest):
     """
     Submits a YouTube URL. Returns a task ID to poll for status.
     """
-    workflow = chain(
-        get_transcript_task.s(payload.url),
-        orchestrate_translation_task.s()
-    )
-    task_result = workflow.apply_async()
-    return {"task_id": task_result.id, "status": "PENDING"}
+    import uuid
+    orchestrate_task_id = str(uuid.uuid4())
+    get_transcript_task_id = str(uuid.uuid4())
+
+    sig_get = get_transcript_task.s(payload.url, orchestrate_task_id)
+    sig_get.set(task_id=get_transcript_task_id)
+
+    sig_orch = orchestrate_translation_task.s()
+    sig_orch.set(task_id=orchestrate_task_id)
+
+    workflow = chain(sig_get, sig_orch)
+    workflow.apply_async()
+    return {"task_id": orchestrate_task_id, "status": "PENDING"}
 
 
 @router.get(
@@ -92,9 +99,26 @@ def get_task_status(task_id: str):
     """
     res = AsyncResult(task_id, app=celery_app)
     
+    # Try to fetch progress from Redis
+    progress_val = 0
+    if res.state in ["SUCCESS", "FAILURE"]:
+        progress_val = 100
+    else:
+        import os
+        import redis
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        try:
+            r = redis.Redis.from_url(redis_url)
+            val = r.get(f"progress:{task_id}")
+            if val is not None:
+                progress_val = int(float(val))
+        except Exception:
+            pass # Gracefully degrade if Redis is down
+            
     response_data = {
         "task_id": task_id,
         "status": res.state,
+        "progress": progress_val,
         "result": None
     }
     

@@ -48,37 +48,21 @@ def _download_audio(url: str) -> str:
         raise FileNotFoundError(f"Could not locate downloaded audio file for YouTube URL: {url}")
 
 
-async def _generate_content_with_retry(
+async def _generate_content_single_call(
     aclient,
     model: str,
     contents: list,
     config: types.GenerateContentConfig
 ):
     """
-    Attempts to call generate_content up to 3 times.
-    Retries are performed on any Exception (e.g. rate limit, temporary gateway errors).
-    Wait times: 5s after 1st failure, 10s after 2nd failure.
+    Calls generate_content exactly once.
     """
-    delays = [5.0, 10.0]
-    max_tries = 3
-    
-    for attempt in range(max_tries):
-        try:
-            logger.info(f"Attempt {attempt + 1} of {max_tries} to transcribe audio using model {model}...")
-            response = await aclient.models.generate_content(
-                model=model,
-                contents=contents,
-                config=config,
-            )
-            return response
-        except Exception as e:
-            logger.warning(f"Attempt {attempt + 1} failed for model {model} with error: {e}")
-            if attempt < max_tries - 1:
-                delay = delays[attempt]
-                logger.info(f"Waiting {delay} seconds before retrying {model}...")
-                await asyncio.sleep(delay)
-            else:
-                raise e
+    logger.info(f"Transcribing audio using model {model}...")
+    return await aclient.models.generate_content(
+        model=model,
+        contents=contents,
+        config=config,
+    )
 
 
 class GeminiTranscriptionService:
@@ -124,7 +108,7 @@ class GeminiTranscriptionService:
             except Exception as e:
                 logger.error(f"Failed to upload audio file to Gemini Files API: {e}")
                 raise HTTPException(
-                    status_code=status.HTTP_524_A_TIMEOUT, # Map to gateway upload failure
+                    status_code=500,  # Map to gateway upload failure
                     detail=f"Failed to upload audio file to Gemini API: {str(e)}"
                 )
 
@@ -139,41 +123,56 @@ class GeminiTranscriptionService:
                 "Please transcribe the entire audio file. Provide accurate start and end timestamps (in seconds) for each segment."
             ]
             
-            # Primary model execution with retry
+            # Run the primary-then-fallback pipeline up to 3 times total
+            delays = [5.0, 10.0]
+            max_tries = 3
             response = None
-            primary_error = None
-            try:
-                response = await _generate_content_with_retry(
-                    aclient=client.aio,
-                    model="gemini-2.5-flash",
-                    contents=contents,
-                    config=config
-                )
-            except Exception as e:
-                primary_error = e
-                logger.warning(
-                    f"Primary model gemini-2.5-flash failed after all retries: {e}. "
-                    "Falling back to gemini-2.5-flash-lite..."
-                )
-                
-            # Fallback model execution with retry if primary failed
-            if response is None:
+            last_exception = None
+            
+            for attempt in range(max_tries):
                 try:
-                    response = await _generate_content_with_retry(
+                    logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying primary model gemini-2.5-flash...")
+                    response = await _generate_content_single_call(
                         aclient=client.aio,
-                        model="gemini-2.5-flash-lite",
+                        model="gemini-2.5-flash",
                         contents=contents,
                         config=config
                     )
-                except Exception as e:
-                    logger.error(f"Fallback model gemini-2.5-flash-lite also failed after all retries: {e}")
-                    raise HTTPException(
-                        status_code=status.HTTP_502_BAD_GATEWAY,
-                        detail=(
-                            f"Gemini transcription failed for both gemini-2.5-flash and fallback gemini-2.5-flash-lite. "
-                            f"Errors: Primary: {str(primary_error)}, Fallback: {str(e)}"
-                        )
+                    break  # Success on primary!
+                except Exception as primary_error:
+                    logger.warning(
+                        f"Pipeline attempt {attempt + 1}: Primary model gemini-2.5-flash failed: {primary_error}. "
+                        "Falling back immediately to gemini-2.5-flash-lite..."
                     )
+                    try:
+                        logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying fallback model gemini-2.5-flash-lite...")
+                        response = await _generate_content_single_call(
+                            aclient=client.aio,
+                            model="gemini-2.5-flash-lite",
+                            contents=contents,
+                            config=config
+                        )
+                        break  # Success on fallback!
+                    except Exception as fallback_error:
+                        last_exception = fallback_error
+                        logger.warning(
+                            f"Pipeline attempt {attempt + 1}: Fallback model gemini-2.5-flash-lite also failed: {fallback_error}"
+                        )
+                        
+                if attempt < max_tries - 1:
+                    delay = delays[attempt]
+                    logger.info(f"Waiting {delay} seconds before retrying the transcription pipeline...")
+                    await asyncio.sleep(delay)
+            
+            if response is None:
+                logger.error(f"Fallback model gemini-2.5-flash-lite also failed after all pipeline attempts: {last_exception}")
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=(
+                        f"Gemini transcription failed for both gemini-2.5-flash and fallback gemini-2.5-flash-lite. "
+                        f"Errors: Last fallback error: {str(last_exception)}"
+                    )
+                )
 
             # Parse the response into TranscriptionResponse Pydantic model
             if response.parsed:

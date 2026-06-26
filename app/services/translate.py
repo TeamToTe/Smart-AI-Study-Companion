@@ -13,58 +13,42 @@ from app.schemas.translation import TranslationResponse, TranslationSegment
 load_dotenv()
 logger = logging.getLogger(__name__)
 
-async def _generate_translation_with_retry(
+async def _generate_translation_single_call(
     client: AsyncGroq,
     model: str,
-    prompt: str,
-    semaphore: asyncio.Semaphore
+    prompt: str
 ) -> dict:
     """
-    Attempts to call groq chat completions create for translation up to 3 times.
-    Wait times: 60s after 1st failure, 120s after 2nd failure.
-    Uses json_object format (standard JSON Mode) under semaphore limit.
+    Calls groq chat completions create for translation exactly once.
+    Uses json_object format (standard JSON Mode).
     """
-    delays = [60.0, 120.0]
-    max_tries = 3
-    
-    async with semaphore:
-        for attempt in range(max_tries):
-            try:
-                logger.info(f"Attempt {attempt + 1} of {max_tries} to translate batch using Groq model {model}...")
-                response = await client.chat.completions.create(
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are a translation assistant. You must respond ONLY with a valid raw JSON object matching "
-                                "the requested schema. Do NOT wrap the JSON in markdown code blocks (e.g. do NOT use ```json or ```). "
-                                "Do NOT include any conversational or introductory text before or after the JSON. "
-                                "Your response must start with '{' and end with '}'."
-                            )
-                        },
-                        {"role": "user", "content": prompt}
-                    ],
-                    model=model,
-                    response_format={"type": "json_object"},
-                    temperature=0.1
+    response = await client.chat.completions.create(
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a translation assistant. You must respond ONLY with a valid raw JSON object matching "
+                    "the requested schema. Do NOT wrap the JSON in markdown code blocks (e.g. do NOT use ```json or ```). "
+                    "Do NOT include any conversational or introductory text before or after the JSON. "
+                    "Your response must start with '{' and end with '}'."
                 )
-                content_text = response.choices[0].message.content
-                if content_text:
-                    content_text = content_text.strip()
-                    if content_text.startswith("```"):
-                        match = re.search(r"^(?:```[a-zA-Z]*\s*\n?)(.*?)(?:\n?\s*```)$", content_text, re.DOTALL)
-                        if match:
-                            content_text = match.group(1).strip()
-                    return json.loads(content_text)
-                raise ValueError("Empty response received")
-            except Exception as e:
-                logger.warning(f"Attempt {attempt + 1} failed for batch with model {model}: {e}")
-                if attempt < max_tries - 1:
-                    delay = delays[attempt]
-                    logger.info(f"Waiting {delay} seconds before retrying {model}...")
-                    await asyncio.sleep(delay)
-                else:
-                    raise e
+            },
+            {"role": "user", "content": prompt}
+        ],
+        model=model,
+        temperature=0.0
+    )
+    content_text = response.choices[0].message.content
+    if content_text:
+        content_text = content_text.strip()
+        # Remove any <think>...</think> block if present in the text
+        content_text = re.sub(r"<think>.*?</think>", "", content_text, flags=re.DOTALL).strip()
+        if content_text.startswith("```"):
+            match = re.search(r"^(?:```[a-zA-Z]*\s*\n?)(.*?)(?:\n?\s*```)$", content_text, re.DOTALL)
+            if match:
+                content_text = match.group(1).strip()
+        return json.loads(content_text)
+    raise ValueError("Empty response received")
 
 
 async def _translate_batch_with_fallback(
@@ -74,8 +58,9 @@ async def _translate_batch_with_fallback(
     semaphore: asyncio.Semaphore
 ) -> dict:
     """
-    Translates a batch of up to 20 segments with primary model qwen/qwen3-32b,
-    falling back to qwen/qwen3.6-27b if the primary fails.
+    Translates a batch of up to 10 segments with primary model qwen/qwen3-32b,
+    falling back to llama-3.3-70b-versatile immediately if the primary fails,
+    and retrying this entire pipeline up to 3 times.
     """
     segments_str = "\n".join(
         f"start={seg['start']}, end={seg['end']}, text={seg['text']}"
@@ -113,28 +98,44 @@ Input Language: {lang}
 Input Segments:
 {segments_str}"""
 
-    try:
-        return await _generate_translation_with_retry(
-            client=client,
-            model="qwen/qwen3-32b",
-            prompt=prompt,
-            semaphore=semaphore
-        )
-    except Exception as primary_err:
-        logger.warning(
-            f"Primary model qwen/qwen3-32b failed for batch. "
-            f"Trying fallback model qwen/qwen3.6-27b. Error: {primary_err}"
-        )
-        try:
-            return await _generate_translation_with_retry(
-                client=client,
-                model="qwen/qwen3.6-27b",
-                prompt=prompt,
-                semaphore=semaphore
-            )
-        except Exception as fallback_err:
-            logger.error(f"Fallback model qwen/qwen3.6-27b also failed for batch: {fallback_err}")
-            raise fallback_err
+    delays = [60.0, 120.0]
+    max_tries = 3
+    last_err = None
+
+    async with semaphore:
+        for attempt in range(max_tries):
+            try:
+                logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying primary model qwen/qwen3-32b...")
+                return await _generate_translation_single_call(
+                    client=client,
+                    model="qwen/qwen3-32b",
+                    prompt=prompt
+                )
+            except Exception as primary_err:
+                logger.warning(
+                    f"Pipeline attempt {attempt + 1}: Primary model qwen/qwen3-32b failed. "
+                    f"Trying fallback model llama-3.3-70b-versatile immediately. Error: {primary_err}"
+                )
+                try:
+                    logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying fallback model llama-3.3-70b-versatile...")
+                    return await _generate_translation_single_call(
+                        client=client,
+                        model="llama-3.3-70b-versatile",
+                        prompt=prompt
+                    )
+                except Exception as fallback_err:
+                    last_err = fallback_err
+                    logger.warning(
+                        f"Pipeline attempt {attempt + 1}: Fallback model llama-3.3-70b-versatile also failed: {fallback_err}"
+                    )
+            
+            if attempt < max_tries - 1:
+                delay = delays[attempt]
+                logger.info(f"Waiting {delay} seconds before retrying the translation pipeline...")
+                await asyncio.sleep(delay)
+                
+        logger.error(f"Fallback model qwen/qwen3.6-27b also failed after all pipeline attempts: {last_err}")
+        raise last_err
 
 
 class TranslateService:
