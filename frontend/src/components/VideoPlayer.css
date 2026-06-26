@@ -70,19 +70,19 @@
 /* Custom Fullscreen Button Styling (Bottom Right) */
 .fullscreen-btn {
   position: absolute;
-  bottom: 48px; /* Slightly above the very bottom to avoid native YouTube hover controls */
+  bottom: 8px; 
   right: 12px;
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  border: none;
   color: white;
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 6px;
+  border-radius: 4px;
   cursor: pointer;
   z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.6;
+  opacity: 0.85;
   transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -91,8 +91,8 @@
 }
 
 .fullscreen-btn:hover {
-  background: rgba(15, 23, 42, 0.85);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(1.08);
 }
 
 /* Fullscreen Overrides */

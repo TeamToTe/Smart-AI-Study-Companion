@@ -193,7 +193,7 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
       </div>
 
       <button className="fullscreen-btn" onClick={toggleFullscreen} title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}>
-        {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        {isFullscreen ? <Minimize2 size={16} strokeWidth={3} /> : <Maximize2 size={16} strokeWidth={3} />}
       </button>
       
       {activeSegment && (
