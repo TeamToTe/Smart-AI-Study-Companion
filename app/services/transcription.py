@@ -20,6 +20,8 @@ def _get_transcript(url: str) -> dict:
         "subtitleslangs": ["en", "vi"],
         "skip_download": True,
         "quiet": True,
+        "js_runtimes": {"node": {}},
+        "remote_components": ["ejs:github"],
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:

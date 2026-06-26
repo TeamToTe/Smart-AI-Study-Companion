@@ -27,6 +27,8 @@ def _download_audio(url: str) -> str:
         'outtmpl': output_path_template,
         'quiet': True,
         'no_warnings': True,
+        'js_runtimes': {'node': {}},
+        'remote_components': ['ejs:github'],
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
