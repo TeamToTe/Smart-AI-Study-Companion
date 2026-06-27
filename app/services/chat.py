@@ -85,6 +85,11 @@ class ChatService:
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Failed to communicate with Gemini API: {str(e)}"
             )
+        finally:
+            try:
+                await client.aio.aclose()
+            except Exception as e:
+                logger.warning(f"Failed to close Gemini API client connection: {e}")
 
 def get_chat_service() -> ChatService:
     """Dependency injection provider cho ChatService."""

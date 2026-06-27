@@ -51,6 +51,16 @@ const LOCALIZATION = {
     rateLimitTitle: "Daily Limit Reached",
     rateLimitDesc: "To protect API limits, you are limited to 10 new video transcriptions per 24 hours. You can still study any video from your History or try the Example lectures!",
     close: "Close",
+    videoOverlayCc: "Video Overlay CC",
+    invalidUrl: "Please enter a valid YouTube URL!",
+    feature1Title: "Interactive Subtitles",
+    feature1Desc: "Protect technical terms in English and inspect immediate translations and academic glossaries on hover.",
+    feature2Title: "AI Study Assistant",
+    feature2Desc: "Ask questions about the video and get context-aware answers with seekable timestamp bookmarks.",
+    feature3Title: "Smart Quizzes",
+    feature3Desc: "Generate custom quizzes based on lecture contents to test your understanding.",
+    feature4Title: "Concept Mindmaps",
+    feature4Desc: "Generate visual concept graphs dynamically linked to key timestamps in the video.",
     // Loader Steps
     loaderStep1: "Validating YouTube video details...",
     loaderStep2: "Checking for pre-existing English / Vietnamese subtitles...",
@@ -95,6 +105,16 @@ const LOCALIZATION = {
     rateLimitTitle: "Đạt Giới Hạn Sử Dụng",
     rateLimitDesc: "Để tránh quá tải hạn ngạch (Rate Limit) API của hệ thống, bạn chỉ được dịch tối đa 10 video mới trong vòng 24 giờ. Bạn vẫn có thể học lại các video trong Lịch sử hoặc chọn các bài giảng mẫu!",
     close: "Đóng",
+    videoOverlayCc: "Phụ đề trên Video",
+    invalidUrl: "Vui lòng nhập đường dẫn YouTube hợp lệ!",
+    feature1Title: "Phụ Đề Tương Tác",
+    feature1Desc: "Bảo vệ thuật ngữ tiếng Anh gốc và tra cứu định nghĩa glossary tức thì khi hover chuột.",
+    feature2Title: "Trợ Lý Học Tập AI",
+    feature2Desc: "Hỏi đáp về nội dung bài giảng, nhận câu trả lời thông minh đính kèm timestamp chuyển tua video.",
+    feature3Title: "Trắc Nghiệm Thông Minh",
+    feature3Desc: "Tự động tạo câu hỏi trắc nghiệm từ nội dung bài giảng để kiểm tra mức độ tiếp thu.",
+    feature4Title: "Sơ Đồ Tư Duy",
+    feature4Desc: "Tạo biểu đồ tư duy trực quan liên kết trực tiếp tới các phân cảnh chính của video.",
     // Loader Steps
     loaderStep1: "Đang xác thực thông tin liên kết YouTube...",
     loaderStep2: "Kiểm tra sự tồn tại của phụ đề tiếng Anh / tiếng Việt gốc...",
@@ -133,10 +153,15 @@ export default function App() {
   
   const [isProcessed, setIsProcessed] = useState(false);
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [videoOverlayCc, setVideoOverlayCc] = useState(false);
   
   // History & Rate Limit States
   const [history, setHistory] = useState([]);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
+
+  // Routing State
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   // 1. Theme application effect
   useEffect(() => {
@@ -155,6 +180,59 @@ export default function App() {
       }
     }
   }, []);
+
+  // Sync routing on initial load
+  useEffect(() => {
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    const videoUrl = params.get('v');
+
+    if (path === '/video' && videoUrl) {
+      setCurrentPath('/video');
+      setTimeout(() => {
+        handleUrlSubmit(videoUrl);
+      }, 150);
+    } else if (videoUrl) {
+      // Redirect /?v=... (old style query) to /video?v=...
+      window.history.replaceState({}, '', `/video?v=${encodeURIComponent(videoUrl)}`);
+      setCurrentPath('/video');
+      setTimeout(() => {
+        handleUrlSubmit(videoUrl);
+      }, 150);
+    } else if (path !== '/' && path !== '/home') {
+      window.history.replaceState({}, '', '/');
+      setCurrentPath('/');
+    } else if (path === '/home') {
+      window.history.replaceState({}, '', '/');
+      setCurrentPath('/');
+    }
+  }, []);
+
+  // Listen to browser Back/Forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const params = new URLSearchParams(window.location.search);
+      const videoUrl = params.get('v');
+      
+      setCurrentPath(path);
+      
+      if (path === '/video' && videoUrl) {
+        if (url !== videoUrl) {
+          handleUrlSubmit(videoUrl);
+        }
+      } else {
+        setUrl('');
+        setSegments([]);
+        setCurrentTime(0);
+        setActiveTab('chat');
+        setLoading(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [url]);
 
   // 3. Translation utility
   const t = (key) => {
@@ -211,15 +289,56 @@ export default function App() {
       return;
     }
 
+    // Check frontend localStorage cache first
+    const cachedSegmentsStr = localStorage.getItem(`studymind_cache_segments_${submittedUrl.toLowerCase()}`);
+    if (cachedSegmentsStr) {
+      try {
+        const cachedSegments = JSON.parse(cachedSegmentsStr);
+        if (cachedSegments && cachedSegments.length > 0) {
+          const matchedExample = EXAMPLES.find(ex => ex.url.toLowerCase() === submittedUrl.toLowerCase());
+          let videoTitle = "Video Lecture";
+          if (matchedExample) {
+            videoTitle = matchedExample.title;
+          } else {
+            const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = submittedUrl.match(reg);
+            const videoId = match ? match[2] : "ID";
+            videoTitle = `Lecture Video [${videoId}]`;
+          }
+
+          setUrl(submittedUrl);
+          setSegments(cachedSegments);
+          setLoading(false);
+          setIsProcessed(true);
+          window.history.pushState({}, '', `/video?v=${encodeURIComponent(submittedUrl)}`);
+          setCurrentPath('/video');
+          addToHistory(submittedUrl, videoTitle);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse cached segments:", e);
+      }
+    }
+
     setUrl(submittedUrl);
     setLoading(true);
     setIsProcessed(false);
     setPendingWorkspaceData(null);
     setIsDemoMode(false);
     setSegments([]);
+    setProgress(0);
+
+    // Redirect to /video immediately so user sees the progress screen from 0%
+    const searchParams = new URLSearchParams(window.location.search);
+    const currentV = searchParams.get('v');
+    if (window.location.pathname !== '/video' || currentV !== submittedUrl) {
+      window.history.pushState({}, '', `/video?v=${encodeURIComponent(submittedUrl)}`);
+    }
+    setCurrentPath('/video');
 
     let fetchedSegments = null;
     let videoTitle = "Video Lecture";
+    let demoIntervalId = null;
 
     // Set custom titles based on example URLs
     const matchedExample = EXAMPLES.find(ex => ex.url.toLowerCase() === submittedUrl.toLowerCase());
@@ -268,6 +387,9 @@ export default function App() {
         }
         
         const statusData = await statusResponse.json();
+        if (statusData.progress !== undefined) {
+          setProgress(statusData.progress);
+        }
         if (statusData.status === 'SUCCESS') {
           taskCompleted = true;
           taskResult = statusData.result;
@@ -288,6 +410,18 @@ export default function App() {
       setIsDemoMode(true);
       const mockSegments = getMockSegmentsForUrl(submittedUrl);
       fetchedSegments = mockSegments;
+      
+      // Simulate progress for Demo Mode
+      setProgress(0);
+      demoIntervalId = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 95) {
+            if (demoIntervalId) clearInterval(demoIntervalId);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 200);
     } finally {
       // Keep loader visible for a minimum of 4 seconds to show the beautiful terminal animation
       const elapsed = Date.now() - startTime;
@@ -295,7 +429,9 @@ export default function App() {
       const remainingTime = Math.max(0, minDuration - elapsed);
       
       setTimeout(() => {
+        if (demoIntervalId) clearInterval(demoIntervalId);
         setIsProcessed(true);
+        setProgress(100);
         setPendingWorkspaceData({
           url: submittedUrl,
           title: videoTitle,
@@ -309,6 +445,15 @@ export default function App() {
     if (pendingWorkspaceData) {
       setSegments(pendingWorkspaceData.segments);
       addToHistory(pendingWorkspaceData.url, pendingWorkspaceData.title);
+      // Cache segments in frontend localStorage
+      try {
+        localStorage.setItem(
+          `studymind_cache_segments_${pendingWorkspaceData.url.toLowerCase()}`,
+          JSON.stringify(pendingWorkspaceData.segments)
+        );
+      } catch (e) {
+        console.error("Failed to cache segments in localStorage:", e);
+      }
     }
     setLoading(false);
   };
@@ -325,8 +470,10 @@ export default function App() {
         },
         ...filtered
       ];
-      localStorage.setItem('studymind_history', JSON.stringify(updated));
-      return updated;
+      // Limit to 30 items to prevent storage bloat
+      const capped = updated.slice(0, 30);
+      localStorage.setItem('studymind_history', JSON.stringify(capped));
+      return capped;
     });
   };
 
@@ -337,10 +484,18 @@ export default function App() {
       localStorage.setItem('studymind_history', JSON.stringify(updated));
       return updated;
     });
+    localStorage.removeItem(`studymind_cache_segments_${urlToDelete.toLowerCase()}`);
   };
 
   const clearHistory = () => {
     localStorage.removeItem('studymind_history');
+    // Clear all cached segments keys
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('studymind_cache_segments_')) {
+        localStorage.removeItem(key);
+      }
+    }
     setHistory([]);
   };
 
@@ -356,6 +511,9 @@ export default function App() {
     setSegments([]);
     setCurrentTime(0);
     setActiveTab('chat');
+    // Navigate back to /
+    window.history.pushState({}, '', '/');
+    setCurrentPath('/');
   };
 
   return (
@@ -383,7 +541,7 @@ export default function App() {
 
       {/* Main Area */}
       <main className="main-content">
-        {!url ? (
+        {currentPath !== '/video' ? (
           <LandingPage 
             onSubmit={handleUrlSubmit} 
             history={history}
@@ -398,6 +556,7 @@ export default function App() {
             isProcessed={isProcessed} 
             onLaunch={handleLaunchWorkspace} 
             lang={lang} 
+            progress={progress}
           />
         ) : (
           <div className="workspace-container">
@@ -416,6 +575,10 @@ export default function App() {
                   url={url} 
                   onProgress={setCurrentTime} 
                   seekTime={seekTime} 
+                  segments={segments}
+                  currentTime={currentTime}
+                  showOverlay={videoOverlayCc}
+                  lang={lang}
                 />
                 <SubtitleViewer 
                   segments={segments} 
@@ -423,6 +586,8 @@ export default function App() {
                   onSeek={handleSeek} 
                   t={t}
                   lang={lang}
+                  videoOverlayCc={videoOverlayCc}
+                  setVideoOverlayCc={setVideoOverlayCc}
                 />
               </div>
 

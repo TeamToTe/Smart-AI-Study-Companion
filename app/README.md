@@ -28,3 +28,4 @@ To prevent hitting API rate limits:
 - A Redis-backed token bucket rate limiter (`app/core/rate_limiter.py`) is shared globally.
 - Both Celery workers and FastAPI synchronous endpoints check this limiter before hitting Groq.
 - If limits are reached, background tasks retry with backoff, and synchronous requests pause and retry.
+

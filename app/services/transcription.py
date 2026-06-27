@@ -17,9 +17,11 @@ def _get_transcript(url: str) -> dict:
     ydl_opts = {
         "writesubtitles": True,
         "writeautomaticsub": True,
-        "subtitleslangs": ["en", "vi"],
+        "subtitleslangs": ["en.*", "vi.*"],
         "skip_download": True,
         "quiet": True,
+        "js_runtimes": {"node": {}},
+        "remote_components": ["ejs:github"],
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -28,17 +30,24 @@ def _get_transcript(url: str) -> dict:
     # Thử manual subtitle trước, rồi mới auto-generated
     for sub_type in ["subtitles", "automatic_captions"]:
         subs = info.get(sub_type, {})
-        for lang in ["en", "vi"]:
-            if lang not in subs:
-                continue
+        matched_keys = []
+        for k in subs.keys():
+            lang_prefix = k.lower().split('-')[0]
+            if lang_prefix == "vi":
+                matched_keys.insert(0, k)
+            elif lang_prefix == "en":
+                matched_keys.append(k)
+
+        for lang_key in matched_keys:
             # Lấy format json3
-            formats = subs[lang]
+            formats = subs[lang_key]
             json3 = next((f for f in formats if f.get("ext") == "json3"), None)
             if not json3:
                 continue
             segments = _parse_json3_url(json3["url"])
             if segments:
-                return {"source": "youtube", "lang": lang, "segments": segments}
+                norm_lang = "vi" if lang_key.lower().startswith("vi") else "en"
+                return {"source": "youtube", "lang": norm_lang, "segments": segments}
 
     return {"source": None, "segments": []}
 

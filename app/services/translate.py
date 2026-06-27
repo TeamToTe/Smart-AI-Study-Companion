@@ -13,6 +13,15 @@ from app.schemas.translation import TranslationResponse, TranslationSegment
 load_dotenv()
 logger = logging.getLogger(__name__)
 
+MODELS = [
+    'openai/gpt-oss-120b', 
+    'llama-3.3-70b-versatile',
+    'qwen/qwen3-32b', 
+    'qwen/qwen3.6-27b',
+    'openai/gpt-oss-20b',
+    'llama-3.1-8b-instant',
+]
+
 async def _generate_translation_single_call(
     client: AsyncGroq,
     model: str,
@@ -58,30 +67,35 @@ async def _translate_batch_with_fallback(
     semaphore: asyncio.Semaphore
 ) -> dict:
     """
-    Translates a batch of up to 10 segments with primary model qwen/qwen3-32b,
-    falling back to llama-3.3-70b-versatile immediately if the primary fails,
+    Translates a batch of up to 10 segments with primary model,
+    falling back to others if the primary fails,
     and retrying this entire pipeline up to 3 times.
     """
     segments_str = "\n".join(
         f"start={seg['start']}, end={seg['end']}, text={seg['text']}"
         for seg in batch_segments
     )
+    if lang == "vi":
+        action_instructions = """1. Scan the segments to identify machine learning, data science, mathematics, and computer science domain terms that have been translated into Vietnamese (e.g. 'hạ độ dốc', 'tốc độ học', 'mạng nơ-ron', 'lan truyền ngược', 'hàm mất mát', etc.).
+2. Translate those terms back to their original/standard English equivalents in the text.
+3. For each segment, return all such English domain words that were restored in that segment in the 'domain_words' list."""
+    else:
+        action_instructions = """1. Translate each segment's 'text' to Vietnamese.
+2. Crucially, keep machine learning, data science, mathematics, and computer science domain terms in English. DO NOT translate them to Vietnamese.
+   Examples: 'gradient descent', 'learning rate', 'SVD' / 'singular value decomposition', 'neural networks', 'backpropagation', 'epoch', 'batch size', 'loss function', 'overfitting', 'underfitting', etc.
+3. For each segment, return all such English domain words that were preserved in that segment in the 'domain_words' list."""
+
     prompt = f"""You are an expert translator and computer science professor fluent in both English and Vietnamese.
-Your task is to process a list of timed transcription segments (maximum of 20 segments) and output a JSON response matching the specified structure.
-The final translation language must be Vietnamese ('vi').
+Your task is to process a list of timed transcription segments (maximum of 10 segments) and output a JSON response matching the specified structure.
+The final translation language MUST BE Vietnamese ('vi').
 
 Instructions:
-1. If the input language is NOT Vietnamese (e.g. 'en'):
-   - Translate each segment's 'text' to Vietnamese.
-   - Crucially, keep machine learning, data science, mathematics, and computer science domain terms in English. DO NOT translate them to Vietnamese. Examples: 'gradient descent', 'learning rate', 'SVD' / 'singular value decomposition', 'neural networks', 'backpropagation', 'epoch', 'batch size', 'loss function', 'overfitting', 'underfitting', etc.
-   - For each segment, return all such English domain words that were preserved in that segment in the 'domain_words' list.
+You MUST translate and include EVERY SINGLE segment from the input list in the output JSON. Do not omit, combine, or skip any segments.
+For each segment, preserve its exact 'start' and 'end' values from the input list.
 
-2. If the input language is already Vietnamese ('vi'):
-   - Scan the segments to identify machine learning, data science, mathematics, and computer science domain terms that have been translated into Vietnamese (e.g. 'hạ độ dốc', 'tốc độ học', 'mạng nơ-ron', 'lan truyền ngược', 'hàm mất mát', etc.).
-   - Translate those terms back to their original/standard English equivalents in the text.
-   - For each segment, return all such English domain words that were restored in that segment in the 'domain_words' list.
+{action_instructions}
 
-3. The output JSON must strictly follow this structure:
+The output JSON must strictly follow this structure:
 {{
   "segments": [
     {{
@@ -104,29 +118,34 @@ Input Segments:
 
     async with semaphore:
         for attempt in range(max_tries):
-            try:
-                logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying primary model qwen/qwen3-32b...")
-                return await _generate_translation_single_call(
-                    client=client,
-                    model="qwen/qwen3-32b",
-                    prompt=prompt
-                )
-            except Exception as primary_err:
-                logger.warning(
-                    f"Pipeline attempt {attempt + 1}: Primary model qwen/qwen3-32b failed. "
-                    f"Trying fallback model llama-3.3-70b-versatile immediately. Error: {primary_err}"
-                )
+            for model in MODELS:
                 try:
-                    logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying fallback model llama-3.3-70b-versatile...")
-                    return await _generate_translation_single_call(
+                    logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying model {model}...")
+                    res_dict = await _generate_translation_single_call(
                         client=client,
-                        model="llama-3.3-70b-versatile",
+                        model=model,
                         prompt=prompt
                     )
-                except Exception as fallback_err:
-                    last_err = fallback_err
+                    
+                    # Normalize and validate schema to prevent silent dropping of segments
+                    if isinstance(res_dict, list):
+                        res_dict = {"segments": res_dict}
+                    elif isinstance(res_dict, dict):
+                        if "segments" not in res_dict:
+                            for alt_key in ["translations", "translated_segments"]:
+                                if alt_key in res_dict and isinstance(res_dict[alt_key], list):
+                                    res_dict["segments"] = res_dict[alt_key]
+                                    break
+                    
+                    if not res_dict.get("segments") and batch_segments:
+                        raise ValueError("Translation response contains no segments or failed validation")
+                        
+                    res_dict["model"] = model
+                    return res_dict
+                except Exception as err:
+                    last_err = err
                     logger.warning(
-                        f"Pipeline attempt {attempt + 1}: Fallback model llama-3.3-70b-versatile also failed: {fallback_err}"
+                        f"Pipeline attempt {attempt + 1}: Model {model} failed: {err}"
                     )
             
             if attempt < max_tries - 1:
@@ -134,7 +153,7 @@ Input Segments:
                 logger.info(f"Waiting {delay} seconds before retrying the translation pipeline...")
                 await asyncio.sleep(delay)
                 
-        logger.error(f"Fallback model qwen/qwen3.6-27b also failed after all pipeline attempts: {last_err}")
+        logger.error(f"Fallback also failed after all pipeline attempts: {last_err}")
         raise last_err
 
 
@@ -197,12 +216,14 @@ class TranslateService:
                 )
                 
                 parsed_segs = []
-                for seg in res_dict.get("segments", []):
+                for i, seg in enumerate(res_dict.get("segments", [])):
+                    orig_text = batch[i].text if i < len(batch) else ""
                     parsed_segs.append(
                         TranslationSegment(
                             start=seg.get("start", 0.0),
                             end=seg.get("end", 0.0),
                             text=seg.get("text", ""),
+                            original_text=orig_text,
                             domain_words=seg.get("domain_words", [])
                         )
                     )
