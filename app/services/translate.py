@@ -140,6 +140,7 @@ Input Segments:
                     if not res_dict.get("segments") and batch_segments:
                         raise ValueError("Translation response contains no segments or failed validation")
                         
+                    res_dict["model"] = model
                     return res_dict
                 except Exception as err:
                     last_err = err
