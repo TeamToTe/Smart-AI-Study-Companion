@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageSquare, Bot, User, Clock, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Clock, Loader2 } from 'lucide-react';
 import './RAGChatbot.css';
 
 export default function RAGChatbot({ segments, onSeek, t }) {
@@ -26,62 +26,143 @@ export default function RAGChatbot({ segments, onSeek, t }) {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Format time display
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
   // Click handler for seeks inside text
   const handleTimestampClick = (secs) => {
     onSeek(secs);
   };
 
-  // Custom parser to replace timestamp annotations (e.g., [01:23] or [83]) with clickable badges
+  // Custom parser to handle Markdown elements (headings, bold, lists, code) and timestamp badges [MM:SS]
   const renderMessageText = (text) => {
-    // Match timestamps format: [MM:SS] or [SS] or [HH:MM:SS] or [sec: 83]
-    const regex = /\[(\d{2}):(\d{2})\]/g;
+    if (!text) return null;
     
-    const parts = [];
-    let lastIndex = 0;
-    let match;
+    const lines = text.split('\n');
+    let insideList = false;
+    const renderedElements = [];
+    let listItems = [];
 
-    while ((match = regex.exec(text)) !== null) {
-      const matchIndex = match.index;
-      // Add plain text before match
-      if (matchIndex > lastIndex) {
-        parts.push(text.substring(lastIndex, matchIndex));
+    // Helper: Parse inline styles (Timestamp, Bold, Inline code)
+    const parseInlineStyles = (lineText, lineKey) => {
+      const timestampRegex = /\[(\d{2}):(\d{2})\]/g;
+      const parts = [];
+      let lastIndex = 0;
+      let match;
+      let partKey = 0;
+
+      while ((match = timestampRegex.exec(lineText)) !== null) {
+        const matchIndex = match.index;
+        
+        if (matchIndex > lastIndex) {
+          parts.push(...parseBoldAndCode(lineText.substring(lastIndex, matchIndex), `${lineKey}-${partKey++}`));
+        }
+
+        const mins = parseInt(match[1], 10);
+        const secs = parseInt(match[2], 10);
+        const totalSeconds = mins * 60 + secs;
+
+        parts.push(
+          <button 
+            key={`${lineKey}-ts-${matchIndex}`}
+            className="chat-timestamp-badge"
+            onClick={() => handleTimestampClick(totalSeconds)}
+            title={`Seek to ${match[1]}:${match[2]}`}
+          >
+            <Clock size={10} />
+            <span>{match[1]}:{match[2]}</span>
+          </button>
+        );
+
+        lastIndex = timestampRegex.lastIndex;
       }
 
-      const mins = parseInt(match[1], 10);
-      const secs = parseInt(match[2], 10);
-      const totalSeconds = mins * 60 + secs;
+      if (lastIndex < lineText.length) {
+        parts.push(...parseBoldAndCode(lineText.substring(lastIndex), `${lineKey}-${partKey++}`));
+      }
 
-      // Add clickable timestamp badge
-      parts.push(
-        <button 
-          key={matchIndex}
-          className="chat-timestamp-badge"
-          onClick={() => handleTimestampClick(totalSeconds)}
-          title={`Seek to ${match[1]}:${match[2]}`}
-        >
-          <Clock size={10} />
-          <span>{match[1]}:{match[2]}</span>
-        </button>
+      return parts.length > 0 ? parts : [lineText];
+    };
+
+    // Helper: Parse Bold **bold** and Code `code`
+    const parseBoldAndCode = (inputText, parentKey) => {
+      const regex = /(\*\*.*?\*\*|`.*?`)/g;
+      const parts = inputText.split(regex);
+      
+      return parts.map((part, index) => {
+        const key = `${parentKey}-${index}`;
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={key}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('`') && part.endsWith('`')) {
+          return <code key={key} className="chat-inline-code">{part.slice(1, -1)}</code>;
+        }
+        return part;
+      });
+    };
+
+    lines.forEach((line, lineIndex) => {
+      const trimmedLine = line.trim();
+      const lineKey = `line-${lineIndex}`;
+
+      if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+        if (!insideList) {
+          insideList = true;
+          listItems = [];
+        }
+        const itemContent = trimmedLine.substring(2);
+        listItems.push(
+          <li key={`li-${lineIndex}`}>
+            {parseInlineStyles(itemContent, `li-content-${lineIndex}`)}
+          </li>
+        );
+      } else {
+        if (insideList) {
+          renderedElements.push(
+            <ul key={`ul-${lineIndex}`} className="chat-ul">
+              {listItems}
+            </ul>
+          );
+          insideList = false;
+        }
+
+        if (trimmedLine.startsWith('### ')) {
+          renderedElements.push(
+            <h4 key={lineKey} className="chat-h4">
+              {parseInlineStyles(trimmedLine.substring(4), lineKey)}
+            </h4>
+          );
+        } else if (trimmedLine.startsWith('## ')) {
+          renderedElements.push(
+            <h3 key={lineKey} className="chat-h3">
+              {parseInlineStyles(trimmedLine.substring(3), lineKey)}
+            </h3>
+          );
+        } else if (trimmedLine.startsWith('# ')) {
+          renderedElements.push(
+            <h2 key={lineKey} className="chat-h2">
+              {parseInlineStyles(trimmedLine.substring(2), lineKey)}
+            </h2>
+          );
+        } else if (trimmedLine !== '') {
+          renderedElements.push(
+            <div key={lineKey} className="chat-p">
+              {parseInlineStyles(line, lineKey)}
+            </div>
+          );
+        }
+      }
+    });
+
+    if (insideList) {
+      renderedElements.push(
+        <ul key="ul-end" className="chat-ul">
+          {listItems}
+        </ul>
       );
-
-      lastIndex = regex.lastIndex;
     }
 
-    if (lastIndex < text.length) {
-      parts.push(text.substring(lastIndex));
-    }
-
-    return parts.length > 0 ? parts : text;
+    return renderedElements;
   };
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
@@ -96,17 +177,56 @@ export default function RAGChatbot({ segments, onSeek, t }) {
     setInput('');
     setLoading(true);
 
-    // Simulate RAG Pipeline delay (1.5 - 2s)
-    setTimeout(() => {
-      const responseText = queryLocalRAG(userText, segments, t);
+    try {
+      // Map frontend messages history to Backend ChatMessage structure
+      const history = messages
+        .filter(msg => msg.text !== t('chatbotWelcome'))
+        .map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'model',
+          content: msg.text
+        }));
+
+      // Call Backend API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          query: userText,
+          history: history,
+          segments: segments.map(seg => ({
+            start: seg.start,
+            end: seg.end,
+            text: seg.text
+          }))
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || 'Failed to get answer from server');
+      }
+
+      const data = await response.json();
+      
       const botMsg = {
         sender: 'bot',
-        text: responseText,
+        text: data.response,
         time: new Date()
       };
       setMessages(prev => [...prev, botMsg]);
+    } catch (err) {
+      console.error("Chat API Error:", err);
+      const errorMsg = {
+        sender: 'bot',
+        text: "Xin lỗi, tôi gặp sự cố khi kết nối với máy chủ AI Tutor. Hãy đảm bảo máy chủ Backend đang chạy và API Key đã được cấu hình chính xác.",
+        time: new Date()
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -119,7 +239,9 @@ export default function RAGChatbot({ segments, onSeek, t }) {
             </div>
             <div className="chat-bubble-content">
               <div className="chat-bubble">
-                <p>{renderMessageText(msg.text)}</p>
+                <div className="chat-formatted-content">
+                  {renderMessageText(msg.text)}
+                </div>
               </div>
               <span className="chat-time">
                 {msg.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -159,93 +281,3 @@ export default function RAGChatbot({ segments, onSeek, t }) {
   );
 }
 
-// Client-side RAG simulation matching keyword topics with timestamps in the transcript
-function queryLocalRAG(query, segments, t) {
-  if (!segments || segments.length === 0) {
-    return "I'm sorry, I couldn't access the video transcript context to answer your question.";
-  }
-
-  const q = query.toLowerCase();
-
-  // Helper to format timestamp numbers to [MM:SS]
-  const toTimestamp = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `[${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}]`;
-  };
-
-  // Find segments containing query words
-  let matchedSegments = [];
-  
-  // Specific Technical topic mapping
-  if (q.includes("linked list") || q.includes("list") || q.includes("node") || q.includes("pointer")) {
-    matchedSegments = segments.filter(seg => 
-      seg.text.toLowerCase().includes("list") || 
-      seg.text.toLowerCase().includes("node") || 
-      seg.text.toLowerCase().includes("pointer")
-    );
-    
-    if (matchedSegments.length > 0) {
-      const first = matchedSegments[0];
-      return `A **Linked List** is a linear data structure discussed around ${toTimestamp(first.start)}. Unlike arrays, elements in a linked list are not stored in contiguous memory but are linked via pointers. Each element is called a **Node** and contains a data field and a next pointer which points to the next node in the list. You can see this visualised or explained in the video starting at ${toTimestamp(first.start)}.`;
-    }
-  }
-
-  if (q.includes("fastapi") || q.includes("framework") || q.includes("api")) {
-    matchedSegments = segments.filter(seg => 
-      seg.text.toLowerCase().includes("fastapi") || 
-      seg.text.toLowerCase().includes("framework") || 
-      seg.text.toLowerCase().includes("api")
-    );
-    if (matchedSegments.length > 0) {
-      const first = matchedSegments[0];
-      return `The tutor explains **FastAPI** around ${toTimestamp(first.start)}. FastAPI is a Python web framework designed for high performance and speedy API creation. It automatically supports async execution and validates client request schemas using Pydantic. Review this segment in the video at ${toTimestamp(first.start)}.`;
-    }
-  }
-
-  if (q.includes("gradient descent") || q.includes("loss") || q.includes("optimize") || q.includes("neural")) {
-    matchedSegments = segments.filter(seg => 
-      seg.text.toLowerCase().includes("gradient") || 
-      seg.text.toLowerCase().includes("loss") || 
-      seg.text.toLowerCase().includes("neural")
-    );
-    if (matchedSegments.length > 0) {
-      const first = matchedSegments[0];
-      return `Around ${toTimestamp(first.start)}, the video introduces **Gradient Descent** as a crucial optimization algorithm. In training Neural Networks, the goal is to minimize the **Loss Function**, which measures the model's error. Gradient Descent calculates the gradient slope and updates model weights in the direction of the steepest descent to reduce errors. Watch the full walkthrough at ${toTimestamp(first.start)}.`;
-    }
-  }
-
-  if (q.includes("what is the video") || q.includes("summary") || q.includes("about") || q.includes("tóm tắt")) {
-    // Generate summary using first few segments
-    const firstSec = segments[0];
-    const middleSec = segments[Math.floor(segments.length / 2)];
-    return `This video is an educational lecture. It starts at ${toTimestamp(firstSec.start)} with an introduction of the main concepts. By the middle of the lecture around ${toTimestamp(middleSec.start)}, the tutor goes deeper into details, implementations, and concrete examples. Please ask about specific keywords like "linked list", "FastAPI", or "gradient descent" for detailed timestamp seek pointers.`;
-  }
-
-  // General semantic keyword match fallbacks
-  const keywords = q.split(/\s+/).filter(w => w.length > 3);
-  let bestMatch = null;
-  let maxHits = 0;
-
-  for (const seg of segments) {
-    let hits = 0;
-    const textLower = seg.text.toLowerCase();
-    for (const kw of keywords) {
-      if (textLower.includes(kw)) hits++;
-    }
-    if (hits > maxHits) {
-      maxHits = hits;
-      bestMatch = seg;
-    }
-  }
-
-  if (bestMatch && maxHits > 0) {
-    return `Based on your question, I found a matching section in the lecture at ${toTimestamp(bestMatch.start)} where the speaker mentions: 
-    
-    *"${bestMatch.text}"*
-    
-    Click the timestamp badge ${toTimestamp(bestMatch.start)} to jump directly to this explanation.`;
-  }
-
-  return "I searched the transcript but couldn't find a direct answer to that query. Try asking about the main technical terms mentioned in the video (e.g. lists, nodes, API endpoints, neural training).";
-}
