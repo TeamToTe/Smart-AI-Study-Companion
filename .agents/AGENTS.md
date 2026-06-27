@@ -8,5 +8,6 @@
 - **Test-Driven Execution**: Break tasks into a step-by-step plan and always write a reproducing or failing test first before looping through verification.
 
 ## Available Agent Skills (Router)
-*Do not execute these workflows directly from this file. Load the specific skill from the `skills/` directory on demand:* [1]
-- `pydantic_and_fastapi_design`: Use when writing APIs and design pydantic model for request/response.
+*Do not execute these workflows directly from this file. Load the specific skill from the `.agents/skills/` directory on demand:*
+- `pydantic_and_fastapi_design`: Use when writing APIs and designing Pydantic models for request/response. Located in `.agents/skills/pydantic_and_fastapi_design/SKILL.md`.
+- `design_conformance`: Use when auditing React components and CSS files for compliance with the design tokens in `design.md`. Located in `.agents/skills/design_conformance/SKILL.md`.
