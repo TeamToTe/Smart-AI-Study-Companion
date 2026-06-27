@@ -97,9 +97,11 @@ def translate_batch_task(self, batch_segments: list, lang: str, orchestrate_task
             pass
 
         translated_list = res.get("segments", [])
+        model_name = res.get("model", "")
         for i, seg in enumerate(translated_list):
             if i < len(batch_segments):
                 seg["original_text"] = batch_segments[i]["text"]
+            seg["model"] = model_name
         return translated_list
     except Exception as e:
         logger.warning(f"Failed to translate batch, retrying: {e}")
