@@ -14,10 +14,12 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 MODELS = [
+    'openai/gpt-oss-120b', 
     'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
     'qwen/qwen3-32b', 
-    'qwen/qwen3.6-27b'
+    'qwen/qwen3.6-27b',
+    'openai/gpt-oss-20b',
+    'llama-3.1-8b-instant',
 ]
 
 async def _generate_translation_single_call(
@@ -73,22 +75,27 @@ async def _translate_batch_with_fallback(
         f"start={seg['start']}, end={seg['end']}, text={seg['text']}"
         for seg in batch_segments
     )
+    if lang == "vi":
+        action_instructions = """1. Scan the segments to identify machine learning, data science, mathematics, and computer science domain terms that have been translated into Vietnamese (e.g. 'hạ độ dốc', 'tốc độ học', 'mạng nơ-ron', 'lan truyền ngược', 'hàm mất mát', etc.).
+2. Translate those terms back to their original/standard English equivalents in the text.
+3. For each segment, return all such English domain words that were restored in that segment in the 'domain_words' list."""
+    else:
+        action_instructions = """1. Translate each segment's 'text' to Vietnamese.
+2. Crucially, keep machine learning, data science, mathematics, and computer science domain terms in English. DO NOT translate them to Vietnamese.
+   Examples: 'gradient descent', 'learning rate', 'SVD' / 'singular value decomposition', 'neural networks', 'backpropagation', 'epoch', 'batch size', 'loss function', 'overfitting', 'underfitting', etc.
+3. For each segment, return all such English domain words that were preserved in that segment in the 'domain_words' list."""
+
     prompt = f"""You are an expert translator and computer science professor fluent in both English and Vietnamese.
-Your task is to process a list of timed transcription segments (maximum of 20 segments) and output a JSON response matching the specified structure.
-The final translation language must be Vietnamese ('vi').
+Your task is to process a list of timed transcription segments (maximum of 10 segments) and output a JSON response matching the specified structure.
+The final translation language MUST BE Vietnamese ('vi').
 
 Instructions:
-1. If the input language is NOT Vietnamese (e.g. 'en'):
-   - Translate each segment's 'text' to Vietnamese.
-   - Crucially, keep machine learning, data science, mathematics, and computer science domain terms in English. DO NOT translate them to Vietnamese. Examples: 'gradient descent', 'learning rate', 'SVD' / 'singular value decomposition', 'neural networks', 'backpropagation', 'epoch', 'batch size', 'loss function', 'overfitting', 'underfitting', etc.
-   - For each segment, return all such English domain words that were preserved in that segment in the 'domain_words' list.
+You MUST translate and include EVERY SINGLE segment from the input list in the output JSON. Do not omit, combine, or skip any segments.
+For each segment, preserve its exact 'start' and 'end' values from the input list.
 
-2. If the input language is already Vietnamese ('vi'):
-   - Scan the segments to identify machine learning, data science, mathematics, and computer science domain terms that have been translated into Vietnamese (e.g. 'hạ độ dốc', 'tốc độ học', 'mạng nơ-ron', 'lan truyền ngược', 'hàm mất mát', etc.).
-   - Translate those terms back to their original/standard English equivalents in the text.
-   - For each segment, return all such English domain words that were restored in that segment in the 'domain_words' list.
+{action_instructions}
 
-3. The output JSON must strictly follow this structure:
+The output JSON must strictly follow this structure:
 {{
   "segments": [
     {{
