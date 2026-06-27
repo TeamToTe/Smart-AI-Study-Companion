@@ -90,7 +90,7 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
       </form>
 
       {error && (
-        <div className="url-error-msg animate-fade-in" style={{ color: 'var(--color-danger)', fontSize: '13px', fontWeight: '600', marginTop: '-12px', marginBottom: '24px', textAlign: 'center' }}>
+        <div className="url-error-msg animate-fade-in">
           {error}
         </div>
       )}
