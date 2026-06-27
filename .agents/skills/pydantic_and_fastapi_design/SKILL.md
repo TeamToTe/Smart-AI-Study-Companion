@@ -1,3 +1,8 @@
+---
+name: pydantic_and_fastapi_design
+description: Design robust Pydantic models and FastAPI endpoints following production-grade API design principles.
+---
+
 # Skill: Design Pydantic Models and FastAPI APIs
 
 ## Purpose

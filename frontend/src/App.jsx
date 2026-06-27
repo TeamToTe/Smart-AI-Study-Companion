@@ -30,7 +30,9 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [seekTime, setSeekTime] = useState(null);
   const [segments, setSegments] = useState([]);
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState(() => {
+    return sessionStorage.getItem('studymind_active_tab') || 'chat';
+  });
   
   const [isProcessed, setIsProcessed] = useState(false);
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
@@ -71,6 +73,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('studymind_lang', lang);
   }, [lang]);
+
+  // Save active tab preference to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('studymind_active_tab', activeTab);
+  }, [activeTab]);
 
   // 2. Load History on Mount
   useEffect(() => {
@@ -558,18 +565,18 @@ export default function App() {
               {/* Right Column: Interactive Study Kits */}
               <div className="right-column">
                 <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} t={t}>
-                  {activeTab === 'chat' && (
+                  <div style={{ display: activeTab === 'chat' ? 'block' : 'none', height: '100%' }}>
                     <RAGChatbot segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
-                  )}
-                  {activeTab === 'flashcards' && (
+                  </div>
+                  <div style={{ display: activeTab === 'flashcards' ? 'block' : 'none', height: '100%' }}>
                     <FlashcardKit segments={segments} t={t} />
-                  )}
-                  {activeTab === 'quiz' && (
-                    <QuizKit segments={segments} t={t} />
-                  )}
-                  {activeTab === 'mindmap' && (
+                  </div>
+                  <div style={{ display: activeTab === 'quiz' ? 'block' : 'none', height: '100%' }}>
+                    <QuizKit segments={segments} t={t} videoUrl={url} />
+                  </div>
+                  <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
                     <MindmapKit segments={segments} onSeek={handleSeek} t={t} />
-                  )}
+                  </div>
                 </SidebarTabs>
               </div>
             </div>
