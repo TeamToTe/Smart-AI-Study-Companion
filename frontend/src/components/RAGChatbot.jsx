@@ -2,24 +2,54 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, Clock, Loader2 } from 'lucide-react';
 import './RAGChatbot.css';
 
-export default function RAGChatbot({ segments, onSeek, t }) {
-  const [messages, setMessages] = useState([]);
+export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
+  const [messages, setMessages] = useState(() => {
+    if (videoUrl) {
+      const saved = localStorage.getItem(`chat_history_${videoUrl}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return parsed.map(m => ({ ...m, time: new Date(m.time) }));
+        } catch (e) {
+          console.error("Error parsing chat history:", e);
+        }
+      }
+    }
+    return [];
+  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
 
-  // Initialize with a welcome message from the AI tutor
+  // Load chat history when video changes or t function changes
   useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          sender: 'bot',
-          text: t('chatbotWelcome'),
-          time: new Date()
+    if (videoUrl) {
+      const saved = localStorage.getItem(`chat_history_${videoUrl}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setMessages(parsed.map(m => ({ ...m, time: new Date(m.time) })));
+          return;
+        } catch (e) {
+          console.error("Error parsing chat history:", e);
         }
-      ]);
+      }
     }
-  }, [t, messages.length]);
+    setMessages([
+      {
+        sender: 'bot',
+        text: t('chatbotWelcome'),
+        time: new Date()
+      }
+    ]);
+  }, [videoUrl, t]);
+
+  // Persist chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (videoUrl && messages.length > 0) {
+      localStorage.setItem(`chat_history_${videoUrl}`, JSON.stringify(messages));
+    }
+  }, [messages, videoUrl]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
