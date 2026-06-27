@@ -91,6 +91,28 @@ def start_async_transcription(payload: TranscriptionRequest):
             logger.info(f"Cache hit for video {video_id}. Returning cached task.")
             return {"task_id": f"cached_{video_id}", "status": "SUCCESS"}
 
+    # Check if this video has already been processed and saved in storage
+    import json
+    storage_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage")
+    if os.path.exists(storage_dir):
+        try:
+            for filename in os.listdir(storage_dir):
+                if filename.endswith(".json"):
+                    file_path = os.path.join(storage_dir, filename)
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        stored_url = data.get("youtube_url") or data.get("video_url")
+                        if stored_url and stored_url.lower() == payload.url.lower():
+                            existing_task_id = filename.replace(".json", "")
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.info(f"Storage hit for video URL. Returning existing task_id: {existing_task_id}")
+                            return {"task_id": existing_task_id, "status": "SUCCESS"}
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error scanning storage for existing video: {e}")
+
     import uuid
     orchestrate_task_id = str(uuid.uuid4())
     get_transcript_task_id = str(uuid.uuid4())
@@ -156,6 +178,24 @@ def get_task_status(task_id: str):
             "progress": 0,
             "result": {"error": "Cache file not found or corrupted"}
         }
+
+    # Check if the task result was already saved in storage
+    storage_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage")
+    storage_file = os.path.join(storage_dir, f"{task_id}.json")
+    if os.path.exists(storage_file):
+        try:
+            with open(storage_file, "r", encoding="utf-8") as f:
+                stored_data = json.load(f)
+            return {
+                "task_id": task_id,
+                "status": "SUCCESS",
+                "progress": 100,
+                "result": stored_data
+            }
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error reading storage file {storage_file}: {e}")
 
     res = AsyncResult(task_id, app=celery_app)
     
