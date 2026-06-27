@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, Clock, Loader2 } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
 import './RAGChatbot.css';
 
 export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
@@ -217,11 +218,15 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
         }));
 
       // Call Backend API
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({
           query: userText,
           history: history,

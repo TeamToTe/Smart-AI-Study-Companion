@@ -1,4 +1,9 @@
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv()
+
 from fastapi import FastAPI
 from app.api.transcribe import router as transcribe_router
 from app.api.chat import router as chat_router
