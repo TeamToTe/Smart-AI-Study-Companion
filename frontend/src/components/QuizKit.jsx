@@ -3,7 +3,7 @@ import { CheckCircle2, XCircle, RotateCcw, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './QuizKit.css';
 
-export default function QuizKit({ segments, t }) {
+export default function QuizKit({ segments, t, videoUrl }) {
   const { session } = useAuth();
   const [questions, setQuestions] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -19,6 +19,25 @@ export default function QuizKit({ segments, t }) {
     if (!segments || segments.length === 0) return;
     
     const fetchQuiz = async () => {
+      // Check cache first
+      if (videoUrl) {
+        const cacheKey = `studymind_cache_quiz_${videoUrl.toLowerCase()}`;
+        const cachedQuizStr = localStorage.getItem(cacheKey);
+        if (cachedQuizStr) {
+          try {
+            const cachedQuiz = JSON.parse(cachedQuizStr);
+            if (cachedQuiz && cachedQuiz.length > 0) {
+              setQuestions(cachedQuiz);
+              setLoading(false);
+              setError(null);
+              return; // Skip fetching from API
+            }
+          } catch (e) {
+            console.error("Failed to parse cached quiz:", e);
+          }
+        }
+      }
+
       setLoading(true);
       setError(null);
       try {
@@ -63,6 +82,11 @@ export default function QuizKit({ segments, t }) {
         const parsedQuizzes = JSON.parse(cleanedJson);
         if (Array.isArray(parsedQuizzes) && parsedQuizzes.length > 0) {
           setQuestions(parsedQuizzes);
+          // Save to cache
+          if (videoUrl) {
+            const cacheKey = `studymind_cache_quiz_${videoUrl.toLowerCase()}`;
+            localStorage.setItem(cacheKey, JSON.stringify(parsedQuizzes));
+          }
         } else {
           throw new Error('Invalid quiz format received.');
         }
@@ -224,7 +248,7 @@ export default function QuizKit({ segments, t }) {
     setSubmitted(false);
     setScore(0);
     setShowResult(false);
-  }, [segments, session]);
+  }, [segments, session, videoUrl]);
 
   const handleSelectOption = (idx) => {
     if (submitted) return;

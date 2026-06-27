@@ -572,7 +572,7 @@ export default function App() {
                     <FlashcardKit segments={segments} t={t} />
                   </div>
                   <div style={{ display: activeTab === 'quiz' ? 'block' : 'none', height: '100%' }}>
-                    <QuizKit segments={segments} t={t} />
+                    <QuizKit segments={segments} t={t} videoUrl={url} />
                   </div>
                   <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
                     <MindmapKit segments={segments} onSeek={handleSeek} t={t} />
