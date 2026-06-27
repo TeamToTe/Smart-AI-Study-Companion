@@ -20,7 +20,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
   });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const chatEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
   // Load chat history when video changes or t function changes
   useEffect(() => {
@@ -54,7 +54,9 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
 
   // Scroll to bottom when messages change
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages, loading]);
 
   // Click handler for seeks inside text
@@ -266,7 +268,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
 
   return (
     <div className="chatbot-panel">
-      <div className="chat-messages">
+      <div className="chat-messages" ref={messagesContainerRef}>
         {messages.map((msg, index) => (
           <div key={index} className={`chat-bubble-wrapper ${msg.sender}`}>
             <div className="chat-avatar">
@@ -297,7 +299,6 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
             </div>
           </div>
         )}
-        <div ref={chatEndRef} />
       </div>
 
       <form onSubmit={handleSend} className="chat-input-form">
