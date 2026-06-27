@@ -43,7 +43,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
         time: new Date()
       }
     ]);
-  }, [videoUrl, t]);
+  }, [videoUrl]);
 
   // Persist chat history to localStorage whenever messages change
   useEffect(() => {
