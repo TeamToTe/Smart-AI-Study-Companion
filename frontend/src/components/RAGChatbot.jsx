@@ -52,9 +52,9 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
     }
   }, [messages, videoUrl]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change, but only if we have active chat history (more than 1 message)
   useEffect(() => {
-    if (messagesContainerRef.current) {
+    if (messages.length > 1 && messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages, loading]);
