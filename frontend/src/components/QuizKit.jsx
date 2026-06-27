@@ -7,8 +7,8 @@ export default function QuizKit({ segments, t, videoUrl }) {
   const { session } = useAuth();
   const [questions, setQuestions] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [selectedAns, setSelectedAns] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [selectedAnswers, setSelectedAnswers] = useState([]);
+  const [submittedStates, setSubmittedStates] = useState([]);
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,6 +28,8 @@ export default function QuizKit({ segments, t, videoUrl }) {
             const cachedQuiz = JSON.parse(cachedQuizStr);
             if (cachedQuiz && cachedQuiz.length > 0) {
               setQuestions(cachedQuiz);
+              setSelectedAnswers(new Array(cachedQuiz.length).fill(null));
+              setSubmittedStates(new Array(cachedQuiz.length).fill(false));
               setLoading(false);
               setError(null);
               return; // Skip fetching from API
@@ -82,6 +84,8 @@ export default function QuizKit({ segments, t, videoUrl }) {
         const parsedQuizzes = JSON.parse(cleanedJson);
         if (Array.isArray(parsedQuizzes) && parsedQuizzes.length > 0) {
           setQuestions(parsedQuizzes);
+          setSelectedAnswers(new Array(parsedQuizzes.length).fill(null));
+          setSubmittedStates(new Array(parsedQuizzes.length).fill(false));
           // Save to cache
           if (videoUrl) {
             const cacheKey = `studymind_cache_quiz_${videoUrl.toLowerCase()}`;
@@ -240,34 +244,37 @@ export default function QuizKit({ segments, t, videoUrl }) {
       }
 
       setQuestions(generatedQuizzes);
+      setSelectedAnswers(new Array(generatedQuizzes.length).fill(null));
+      setSubmittedStates(new Array(generatedQuizzes.length).fill(false));
     };
 
     fetchQuiz();
     setCurrentIdx(0);
-    setSelectedAns(null);
-    setSubmitted(false);
     setScore(0);
     setShowResult(false);
   }, [segments, session, videoUrl]);
 
   const handleSelectOption = (idx) => {
-    if (submitted) return;
-    setSelectedAns(idx);
+    if (submittedStates[currentIdx]) return;
+    const nextAnswers = [...selectedAnswers];
+    nextAnswers[currentIdx] = idx;
+    setSelectedAnswers(nextAnswers);
   };
 
   const handleSubmit = () => {
-    if (selectedAns === null || submitted) return;
+    const selectedAns = selectedAnswers[currentIdx];
+    if (selectedAns === null || submittedStates[currentIdx]) return;
     
-    setSubmitted(true);
+    const nextSubmitted = [...submittedStates];
+    nextSubmitted[currentIdx] = true;
+    setSubmittedStates(nextSubmitted);
+    
     if (selectedAns === questions[currentIdx].correct) {
       setScore(prev => prev + 1);
     }
   };
 
   const handleNext = () => {
-    setSelectedAns(null);
-    setSubmitted(false);
-    
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(prev => prev + 1);
     } else {
@@ -277,8 +284,8 @@ export default function QuizKit({ segments, t, videoUrl }) {
 
   const handleRestart = () => {
     setCurrentIdx(0);
-    setSelectedAns(null);
-    setSubmitted(false);
+    setSelectedAnswers(new Array(questions.length).fill(null));
+    setSubmittedStates(new Array(questions.length).fill(false));
     setScore(0);
     setShowResult(false);
   };
@@ -316,9 +323,36 @@ export default function QuizKit({ segments, t, videoUrl }) {
   }
 
   const currentQ = questions[currentIdx];
+  const selectedAns = selectedAnswers[currentIdx];
+  const submitted = submittedStates[currentIdx];
 
   return (
     <div className="quiz-panel animate-fade-in">
+      <div className="quiz-navigation">
+        {questions.map((_, qIdx) => {
+          let btnClass = 'quiz-nav-btn';
+          if (currentIdx === qIdx) {
+            btnClass += ' active';
+          }
+          if (submittedStates[qIdx]) {
+            const isCorrect = selectedAnswers[qIdx] === questions[qIdx].correct;
+            btnClass += isCorrect ? ' correct' : ' incorrect';
+          } else if (selectedAnswers[qIdx] !== null) {
+            btnClass += ' answered';
+          }
+          
+          return (
+            <button 
+              key={qIdx} 
+              className={btnClass}
+              onClick={() => setCurrentIdx(qIdx)}
+            >
+              {qIdx + 1}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="quiz-progress-header">
         <span>QUESTION {currentIdx + 1} OF {questions.length}</span>
         <div className="quiz-mini-bar">
