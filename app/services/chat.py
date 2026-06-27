@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class ChatService:
     async def get_chat_response(self, payload: ChatRequest) -> ChatResponse:
         """
-        Gửi câu hỏi và phụ đề video tới Gemini 2.5 Flash để nhận câu trả lời dạng RAG.
+        Gửi câu hỏi và phụ đề video tới Gemini 2.5 Flash để nhận câu trả lời.
         Sử dụng cơ chế xoay vòng API key (Key Rotation) để phân phối tải.
         """
         api_key = get_gemini_api_key()
@@ -36,7 +36,7 @@ class ChatService:
             "Dưới đây là toàn bộ phụ đề bài giảng đã dịch sang tiếng Việt kèm mốc thời gian tương ứng:\n"
             f"====================\n{transcript_context}\n====================\n\n"
             "Nhiệm vụ của bạn:\n"
-            "1. Hãy trả lời câu hỏi của học viên một cách rõ ràng, dễ hiểu và đi trực tiếp vào nội dung bài giảng. "
+            "1. Hãy trả lời câu hỏi của học viên một cách rõ ràng, ngắn gọn (TỐI ĐA 200 chữ), dễ hiểu và đi trực tiếp vào nội dung bài giảng. "
             "Sử dụng định dạng Markdown phong phú (tiêu đề, in đậm, danh sách thụt lề, bảng so sánh hoặc code block nếu cần).\n"
             "2. Trả lời bằng tiếng Việt, nhưng GIỮ NGUYÊN các thuật ngữ chuyên ngành kỹ thuật và khoa học máy tính bằng tiếng Anh gốc (ví dụ: 'gradient descent', 'learning rate', 'backpropagation', 'epoch', 'overfitting', 'linked list') để bảo vệ tính học thuật của bài giảng.\n"
             "3. BẮT BUỘC chèn mốc thời gian dạng [MM:SS] (hoặc [HH:MM:SS]) trích xuất chính xác từ phụ đề gốc khi bạn đề cập đến một thông tin hoặc kiến thức có trong video bài giảng, giúp học viên dễ dàng bấm vào xem lại. Ví dụ: 'Khái niệm learning rate được giải thích chi tiết ở [05:12]...'\n"
@@ -81,10 +81,22 @@ class ChatService:
             
         except Exception as e:
             logger.error(f"Error calling Gemini in ChatService: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to communicate with Gemini API: {str(e)}"
-            )
+            logger.warning(f"Fallback to gemini-2.5-flash-lite...")
+            try:
+                logger.info("Sending chatbot request to Gemini...")
+                response = await client.aio.models.generate_content(
+                    model="gemini-2.5-flash-lite",
+                    contents=contents,
+                    config=config,
+                )    
+                ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
+                return ChatResponse(response=ai_reply)
+            
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Fallback also failed: {str(e)}"
+                )
         finally:
             try:
                 await client.aio.aclose()
