@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.chat import ChatService, get_chat_service
+from app.core.auth import get_current_user
 
 router = APIRouter(tags=["chat"])
 
@@ -14,9 +15,11 @@ router = APIRouter(tags=["chat"])
 async def chat_with_assistant(
     payload: ChatRequest,
     service: ChatService = Depends(get_chat_service),
+    user: dict = Depends(get_current_user),
 ) -> ChatResponse:
     """
     Endpoint xử lý hội thoại RAG trực tiếp với video.
     Nhận câu hỏi, lịch sử và phụ đề để trả về phản hồi Markdown kèm timestamp.
     """
     return await service.get_chat_response(payload)
+

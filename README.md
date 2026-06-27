@@ -11,6 +11,13 @@ The easiest way to run the entire stack (FastAPI, Redis, and Celery):
    ```env
    GEMINI_API_KEY="your-gemini-api-key"
    GROQ_API_KEY="your-groq-api-key"
+   
+   # Supabase Setup (Dashboard -> Project Settings)
+   SUPABASE_URL="https://your-project.supabase.co"
+   VITE_SUPABASE_URL="https://your-project.supabase.co"
+   ANON_KEY="your-supabase-anon-key"
+   VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
+   SUPABASE_JWT="your-supabase-jwt-secret"
    ```
 
 2. **Start Services**:
@@ -32,6 +39,13 @@ If you want to run the project locally on your host machine, we provide convenie
    ```env
    GEMINI_API_KEY="your-gemini-api-key"
    GROQ_API_KEY="your-groq-api-key"
+   
+   # Supabase Setup (Dashboard -> Project Settings -> API)
+   SUPABASE_URL="https://your-project.supabase.co"
+   VITE_SUPABASE_URL="https://your-project.supabase.co"
+   ANON_KEY="your-supabase-anon-key"
+   VITE_SUPABASE_ANON_KEY="your-supabase-anon-key"
+   SUPABASE_JWT="your-supabase-jwt-secret"
    ```
 
 2. **Automated Setup**:

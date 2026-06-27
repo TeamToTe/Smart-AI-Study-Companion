@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2 } from 'lucide-react';
+import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import SkeletonLoader from './components/SkeletonLoader';
 import VideoPlayer from './components/VideoPlayer';
@@ -11,6 +11,8 @@ import QuizKit from './components/QuizKit';
 import MindmapKit from './components/MindmapKit';
 import ThemeToggle from './components/ThemeToggle';
 import LanguageToggle from './components/LanguageToggle';
+import { useAuth } from './context/AuthContext';
+import AuthModal from './components/AuthModal';
 import './App.css';
 
 // Translation dictionary
@@ -43,6 +45,8 @@ const LOCALIZATION = {
     backToLanding: "Go Back",
     demoBadge: "Offline Fallback Demo Mode",
     footerText: "Developed by TeamToTe for Coding Inspiration 2026.",
+    signIn: "Sign In",
+    signOut: "Sign Out",
     // New Translations
     studyHistory: "Study History",
     noHistory: "No history yet. Paste a YouTube URL above to begin!",
@@ -97,6 +101,8 @@ const LOCALIZATION = {
     backToLanding: "Quay lại",
     demoBadge: "Chế Độ Chạy Thử Fallback",
     footerText: "Phát triển bởi Đội thi TeamToTe - Cuộc thi Coding Inspiration 2026.",
+    signIn: "Đăng Nhập",
+    signOut: "Đăng Xuất",
     // New Translations
     studyHistory: "Lịch Sử Học Tập",
     noHistory: "Chưa có lịch sử học tập. Hãy dán link YouTube ở trên để bắt đầu!",
@@ -155,6 +161,10 @@ export default function App() {
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
   const [progress, setProgress] = useState(0);
   const [videoOverlayCc, setVideoOverlayCc] = useState(false);
+  
+  // Auth state
+  const { user, session, signOut } = useAuth();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   // History & Rate Limit States
   const [history, setHistory] = useState([]);
@@ -284,6 +294,10 @@ export default function App() {
 
   // 5. Handle Video Submission & API calls
   const handleUrlSubmit = async (submittedUrl) => {
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     // Run Rate Limiting check
     if (!checkRateLimit(submittedUrl)) {
       return;
@@ -354,12 +368,15 @@ export default function App() {
 
     const startTime = Date.now();
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
       // Connect to FastAPI backend async endpoint
       const response = await fetch('/api/transcriptions/async', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify({ url: submittedUrl })
       });
 
@@ -381,7 +398,14 @@ export default function App() {
       while (!taskCompleted) {
         await new Promise(resolve => setTimeout(resolve, pollInterval));
         
-        const statusResponse = await fetch(`/api/tasks/${taskId}`);
+        const statusHeaders = {};
+        if (session?.access_token) {
+          statusHeaders['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        
+        const statusResponse = await fetch(`/api/tasks/${taskId}`, {
+          headers: statusHeaders
+        });
         if (!statusResponse.ok) {
           throw new Error('Failed to fetch task status');
         }
@@ -536,6 +560,24 @@ export default function App() {
           )}
           <LanguageToggle lang={lang} setLang={setLang} />
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
+          
+          {user ? (
+            <div className="user-profile-menu">
+              <div className="user-info" title={user.email}>
+                <User size={14} />
+                <span className="user-email-text">{user.email.split('@')[0]}</span>
+              </div>
+              <button className="btn-secondary btn-logout" onClick={() => signOut()}>
+                <LogOut size={14} />
+                <span className="btn-text-responsive">{t('signOut')}</span>
+              </button>
+            </div>
+          ) : (
+            <button className="btn-primary btn-login" onClick={() => setIsAuthModalOpen(true)}>
+              <LogIn size={14} />
+              <span>{t('signIn')}</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -633,6 +675,13 @@ export default function App() {
       <footer>
         <p>{t('footerText')} &copy; 2026 | <a href="https://github.com/TeamToTe/Smart-AI-Study-Companion" target="_blank" rel="noreferrer">GitHub Repository</a></p>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        lang={lang} 
+      />
     </div>
   );
 }

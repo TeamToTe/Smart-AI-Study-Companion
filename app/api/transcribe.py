@@ -9,6 +9,7 @@ from app.schemas.translation import TranslationResponse
 from app.services.transcription import TranscriptionService, get_transcription_service
 from app.services.gemini_transcript import GeminiTranscriptionService, get_gemini_transcription_service
 from app.services.translate import TranslateService, get_translate_service
+from app.core.auth import get_current_user
 
 router = APIRouter(tags=["transcriptions"])
 
@@ -22,6 +23,7 @@ router = APIRouter(tags=["transcriptions"])
 async def get_youtube_transcript(
     payload: TranscriptionRequest,
     service: TranscriptionService = Depends(get_transcription_service),
+    user: dict = Depends(get_current_user),
 ) -> TranscriptionResponse:
     """
     Acquires subtitles/captions (manually uploaded or auto-generated)
@@ -69,7 +71,10 @@ async def get_youtube_transcript(
     summary="Asynchronously transcribe and translate YouTube video",
     description="Submits a YouTube video URL for background transcription and translation to Vietnamese.",
 )
-def start_async_transcription(payload: TranscriptionRequest):
+def start_async_transcription(
+    payload: TranscriptionRequest,
+    user: dict = Depends(get_current_user),
+):
     """
     Submits a YouTube URL. Returns a task ID to poll for status, checking for cached responses first.
     """
@@ -121,7 +126,10 @@ def start_async_transcription(payload: TranscriptionRequest):
     status_code=status.HTTP_200_OK,
     summary="Get status and results of a transcription task",
 )
-def get_task_status(task_id: str):
+def get_task_status(
+    task_id: str,
+    user: dict = Depends(get_current_user),
+):
     """
     Checks the status of a Celery background task by ID.
     If the task ID corresponds to a cached video, serves the cache directly.

@@ -29,3 +29,9 @@ To prevent hitting API rate limits:
 - Both Celery workers and FastAPI synchronous endpoints check this limiter before hitting Groq.
 - If limits are reached, background tasks retry with backoff, and synchronous requests pause and retry.
 
+### 3. Supabase Setup
+The backend utilizes Supabase JWT token verification to authenticate endpoints. Configure the following variables in your `.env` file:
+* **`SUPABASE_URL`**: Found in your Supabase Dashboard under *Settings -> Data API -> Project URL*.
+* **`ANON_KEY`**: Found in your Supabase Dashboard under *Settings -> API Keys -> anon public*.
+* **`SUPABASE_JWT`**: Found in your Supabase Dashboard under *Settings -> API -> JWT Keys -> JWT Secret* (the backend decodes the Base64 key to verify ES256 signatures).
+
