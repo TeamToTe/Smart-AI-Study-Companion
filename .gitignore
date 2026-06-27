@@ -1,8 +1,8 @@
-.vscode/
+**/.vscode/
 .env
 .venv/
 .venv
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *.pyc
 *$py.class
