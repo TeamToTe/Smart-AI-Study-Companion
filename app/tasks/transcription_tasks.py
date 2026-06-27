@@ -140,25 +140,6 @@ def merge_translation_task(self, results: list, youtube_url: str = "", orchestra
         except Exception as e:
             logger.error(f"Failed to write translated script to storage: {e}")
 
-    # Cache translation result to file
-    # if youtube_url:
-    #     import json
-    #     import re
-    #     reg = r"^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*"
-    #     match = re.match(reg, youtube_url)
-    #     video_id = match.group(2) if match and len(match.group(2)) == 11 else None
-        
-    #     if video_id:
-    #         cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
-    #         os.makedirs(cache_dir, exist_ok=True)
-    #         cache_file = os.path.join(cache_dir, f"{video_id}.json")
-    #         try:
-    #             with open(cache_file, "w", encoding="utf-8") as f:
-    #                 json.dump(merged_result, f, ensure_ascii=False, indent=2)
-    #             logger.info(f"Saved translation results to cache file: {cache_file}")
-    #         except Exception as e:
-    #             logger.error(f"Failed to write cache file: {e}")
-
     return merged_result
 
 
