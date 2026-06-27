@@ -104,9 +104,33 @@ class GeminiTranscriptionService:
                 
             # Step 2: Upload and transcribe audio using Google GenAI SDK
             # Upload the local audio file to the Gemini Files API
+            # Determine mime type based on file extension
+            import mimetypes
+            mimetypes.init()
+            ext = os.path.splitext(local_file_path)[1].lower()
+            ext_to_mime = {
+                '.m4a': 'audio/mp4',
+                '.mp4': 'audio/mp4',
+                '.mp3': 'audio/mp3',
+                '.ogg': 'audio/ogg',
+                '.wav': 'audio/wav',
+                '.webm': 'audio/webm',
+                '.opus': 'audio/opus',
+                '.flac': 'audio/x-flac',
+                '.aac': 'audio/aac'
+            }
+            mime_type = ext_to_mime.get(ext)
+            if not mime_type:
+                mime_type, _ = mimetypes.guess_type(local_file_path)
+            if not mime_type:
+                mime_type = 'audio/mp4' # Safe default for audio formats
+                
             try:
-                uploaded_file = await client.aio.files.upload(file=local_file_path)
-                logger.info(f"Successfully uploaded audio file to Gemini Files API: {uploaded_file.name}")
+                uploaded_file = await client.aio.files.upload(
+                    file=local_file_path,
+                    config=types.UploadFileConfig(mime_type=mime_type)
+                )
+                logger.info(f"Successfully uploaded audio file to Gemini Files API: {uploaded_file.name} with mime type {mime_type}")
             except Exception as e:
                 logger.error(f"Failed to upload audio file to Gemini Files API: {e}")
                 raise HTTPException(

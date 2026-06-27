@@ -106,8 +106,8 @@ def translate_batch_task(self, batch_segments: list, lang: str, orchestrate_task
         raise self.retry(exc=e, countdown=10)
 
 
-@celery_app.task
-def merge_translation_task(results: list, youtube_url: str = "") -> dict:
+@celery_app.task(bind=True)
+def merge_translation_task(self, results: list, youtube_url: str = "", orchestrate_task_id: str = None) -> dict:
     """
     Combines the results from parallel translated segment batches back into a 
     single unified TranslationResponse-like dict structure and caches it.
@@ -119,28 +119,43 @@ def merge_translation_task(results: list, youtube_url: str = "") -> dict:
         
     merged_result = {
         "lang": "vi",
-        "segments": translated_segments
+        "segments": translated_segments,
+        "youtube_url": youtube_url,
+        "video_url": youtube_url
     }
 
-    # Cache translation result to file
-    if youtube_url:
+    # Save translated script to app/storage
+    task_id = orchestrate_task_id or self.request.id
+    if task_id:
         import json
-        import os
-        import re
-        reg = r"^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*"
-        match = re.match(reg, youtube_url)
-        video_id = match.group(2) if match and len(match.group(2)) == 11 else None
+        storage_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "storage")
+        try:
+            os.makedirs(storage_dir, exist_ok=True)
+            storage_file = os.path.join(storage_dir, f"{task_id}.json")
+            with open(storage_file, "w", encoding="utf-8") as f:
+                json.dump(merged_result, f, ensure_ascii=False, indent=2)
+            logger.info(f"Saved translated script to storage: {storage_file}")
+        except Exception as e:
+            logger.error(f"Failed to write translated script to storage: {e}")
+
+    # Cache translation result to file
+    # if youtube_url:
+    #     import json
+    #     import re
+    #     reg = r"^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*"
+    #     match = re.match(reg, youtube_url)
+    #     video_id = match.group(2) if match and len(match.group(2)) == 11 else None
         
-        if video_id:
-            cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
-            os.makedirs(cache_dir, exist_ok=True)
-            cache_file = os.path.join(cache_dir, f"{video_id}.json")
-            try:
-                with open(cache_file, "w", encoding="utf-8") as f:
-                    json.dump(merged_result, f, ensure_ascii=False, indent=2)
-                logger.info(f"Saved translation results to cache file: {cache_file}")
-            except Exception as e:
-                logger.error(f"Failed to write cache file: {e}")
+    #     if video_id:
+    #         cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
+    #         os.makedirs(cache_dir, exist_ok=True)
+    #         cache_file = os.path.join(cache_dir, f"{video_id}.json")
+    #         try:
+    #             with open(cache_file, "w", encoding="utf-8") as f:
+    #                 json.dump(merged_result, f, ensure_ascii=False, indent=2)
+    #             logger.info(f"Saved translation results to cache file: {cache_file}")
+    #         except Exception as e:
+    #             logger.error(f"Failed to write cache file: {e}")
 
     return merged_result
 
@@ -182,7 +197,7 @@ def orchestrate_translation_task(self, transcription: dict):
     
     # Create parallel translation tasks and link to merge_translation_task callback
     header = group(translate_batch_task.s(batch, lang, self.request.id) for batch in batches)
-    callback = merge_translation_task.s(youtube_url)
+    callback = merge_translation_task.s(youtube_url=youtube_url, orchestrate_task_id=self.request.id)
     
     # Safely replace the task execution with the chord workflow to avoid deadlock and result.get() error
     return self.replace(header | callback)
