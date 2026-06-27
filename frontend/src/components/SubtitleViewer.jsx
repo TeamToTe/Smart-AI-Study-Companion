@@ -45,19 +45,9 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
       const activeLine = activeLineRef.current;
       
       const containerHeight = container.clientHeight;
+      const targetScrollTop = activeLine.offsetTop - (containerHeight / 2) + (activeLine.clientHeight / 2);
       
-      // Calculate coordinates relative to container's viewport
-      const containerRect = container.getBoundingClientRect();
-      const activeLineRect = activeLine.getBoundingClientRect();
-      
-      // relativeTop is the absolute offset of activeLine from container's scroll top
-      const relativeTop = activeLineRect.top - containerRect.top + container.scrollTop;
-      const targetScrollTop = relativeTop - (containerHeight / 2) + (activeLineRect.height / 2);
-      
-      container.scrollTo({
-        top: targetScrollTop,
-        behavior: 'smooth'
-      });
+      container.scrollTop = targetScrollTop;
     }
   }, [activeIdx, autoScroll]);
 
