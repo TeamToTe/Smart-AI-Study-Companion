@@ -141,7 +141,9 @@ const EXAMPLES = [
 ];
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('studymind_theme') || 'light');
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('studymind_theme') || 'light';
+  });
   const [lang, setLang] = useState('vi'); // Default to Vietnamese
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -167,6 +169,7 @@ export default function App() {
   useEffect(() => {
     document.body.className = '';
     document.body.classList.add(`theme-${theme}`);
+    localStorage.setItem('studymind_theme', theme);
   }, [theme]);
 
   // 2. Load History on Mount
