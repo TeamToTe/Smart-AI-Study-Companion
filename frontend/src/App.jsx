@@ -243,7 +243,11 @@ export default function App() {
   };
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    setTheme(prev => {
+      const nextTheme = prev === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('studymind_theme', nextTheme);
+      return nextTheme;
+    });
   };
 
   // 4. Rate Limiting Check
@@ -598,7 +602,7 @@ export default function App() {
               <div className="right-column">
                 <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} t={t}>
                   {activeTab === 'chat' && (
-                    <RAGChatbot segments={segments} onSeek={handleSeek} t={t} />
+                    <RAGChatbot segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
                   )}
                   {activeTab === 'flashcards' && (
                     <FlashcardKit segments={segments} t={t} />
