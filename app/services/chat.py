@@ -4,14 +4,21 @@ from google.genai import types
 from fastapi import HTTPException, status
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.core.key_rotation import get_gemini_api_key
+from app.services.database import DatabaseService
 
 logger = logging.getLogger(__name__)
 
 class ChatService:
-    async def get_chat_response(self, payload: ChatRequest) -> ChatResponse:
+    async def get_chat_response(
+        self, 
+        payload: ChatRequest, 
+        user_token: str, 
+        db_service: DatabaseService
+    ) -> ChatResponse:
         """
         Gửi câu hỏi và phụ đề video tới Gemini 2.5 Flash để nhận câu trả lời.
         Sử dụng cơ chế xoay vòng API key (Key Rotation) để phân phối tải.
+        Lưu trữ lịch sử hội thoại tự động vào database Supabase.
         """
         api_key = get_gemini_api_key()
         if not api_key:
@@ -47,13 +54,16 @@ class ChatService:
             "   - '/mindmap': Hãy tóm tắt bài giảng bằng sơ đồ cây Markdown hoặc cú pháp sơ đồ Mermaid.js."
         )
 
-        # 3. Chuẩn bị lịch sử trò chuyện (chat history) đồng bộ theo cấu trúc google-genai
+        # 3. Lấy lịch sử trò chuyện (chat history) từ database
+        history_messages = await db_service.get_chat_history(user_token, payload.session_id)
+
+        # 4. Chuẩn bị lịch sử trò chuyện (chat history) đồng bộ theo cấu trúc google-genai
         contents = []
-        for msg in payload.history:
-            role = "user" if msg.role == "user" else "model"
+        for msg in history_messages:
+            role = "user" if msg["sender"] == "user" else "model"
             contents.append(types.Content(
                 role=role,
-                parts=[types.Part.from_text(text=msg.content)]
+                parts=[types.Part.from_text(text=msg["text"])]
             ))
             
         # Thêm câu hỏi hiện tại của người dùng
@@ -62,11 +72,11 @@ class ChatService:
             parts=[types.Part.from_text(text=payload.query)]
         ))
 
-        # 4. Thực hiện cuộc gọi API bất đồng bộ tới Gemini
+        # 5. Thực hiện cuộc gọi API bất đồng bộ tới Gemini
         try:
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                temperature=0.3,  # Nhiệt độ thấp giúp câu trả lời chính xác, bám sát ngữ cảnh bài học
+                temperature=0.3,
             )
             
             logger.info("Sending chatbot request to Gemini...")
@@ -77,6 +87,10 @@ class ChatService:
             )
             
             ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
+            
+            # Lưu cặp tin nhắn (user query & bot response) vào database
+            await db_service.save_chat_message(user_token, payload.session_id, payload.query, ai_reply)
+            
             return ChatResponse(response=ai_reply)
             
         except Exception as e:
@@ -90,6 +104,10 @@ class ChatService:
                     config=config,
                 )    
                 ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
+                
+                # Lưu vào database kể cả khi dùng model fallback
+                await db_service.save_chat_message(user_token, payload.session_id, payload.query, ai_reply)
+                
                 return ChatResponse(response=ai_reply)
             
             except Exception as e:
