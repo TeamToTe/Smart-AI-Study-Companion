@@ -575,7 +575,7 @@ export default function App() {
                     <QuizKit segments={segments} t={t} videoUrl={url} />
                   </div>
                   <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
-                    <MindmapKit segments={segments} onSeek={handleSeek} t={t} />
+                    <MindmapKit segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
                   </div>
                 </SidebarTabs>
               </div>

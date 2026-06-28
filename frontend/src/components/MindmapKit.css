@@ -1,77 +1,124 @@
-/* MindmapKit.css */
+/* MindmapKit.css - SVG connecting lines edition */
+
 .mindmap-panel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg); /* 24px */
   width: 100%;
-  padding: 8px;
+  padding: var(--spacing-xs); /* 8px */
   overflow-y: auto;
   max-height: 100%;
+  
+  --line-color: rgba(59, 130, 246, 0.25);
+  --line-active-color: var(--color-accent);
+}
+
+.theme-light .mindmap-panel {
+  --line-color: rgba(37, 99, 235, 0.2);
+  --line-active-color: var(--color-accent);
 }
 
 .mindmap-scroll-area {
   width: 100%;
-  overflow-x: auto;
-  padding: 16px 8px;
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  overflow: hidden;
+  padding: var(--spacing-lg) var(--spacing-md);
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: var(--rounded-md);
   border: 1px solid var(--border-color);
-  min-height: 250px;
+  min-height: 380px;
+  cursor: grab;
+  user-select: none;
 }
 
-.mindmap-tree {
+.theme-light .mindmap-scroll-area {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Horizontal Hierarchical Tree Layout */
+.layout-horizontal {
   display: flex;
-  flex-direction: column;
-  gap: 24px;
-  min-width: 480px;
+  flex-direction: row;
+  gap: 64px; /* Space between Root column and branches column */
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 680px;
+  position: relative;
+  padding: var(--spacing-md) 0;
 }
 
 .mindmap-column {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12px;
+  gap: var(--spacing-xs); /* 8px */
 }
 
-.root-column {
+/* Column 1: Root Node Wrapper */
+.layout-horizontal .root-column {
+  display: flex;
   align-items: center;
-  position: relative;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
 }
 
-.root-column::after {
-  content: '';
-  position: absolute;
-  bottom: -16px;
-  left: 50%;
-  width: 2px;
-  height: 16px;
-  background: var(--border-color);
-}
-
-.mindmap-branches {
+/* Column 2 & 3: Branches Container */
+.layout-horizontal .mindmap-branches-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  position: relative;
-  padding-top: 8px;
+  gap: var(--spacing-xl); /* 32px vertical gap between main branch groups */
+  flex-grow: 1;
+  z-index: 2;
 }
 
-.mindmap-branch-group {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 32px;
+/* Single branch row */
+.layout-horizontal .mindmap-branch-row {
+  display: flex;
+  flex-direction: row;
+  gap: 48px; /* Space between Level 1 and Level 2 */
   align-items: center;
-  position: relative;
 }
 
-.mindmap-branch-group::before {
-  content: '';
+/* Wrapper for Level 1 button to handle flexible centering */
+.layout-horizontal .level-1-wrapper {
+  display: flex;
+  align-items: center;
+  min-width: 140px;
+  flex-shrink: 0;
+}
+
+/* Wrapper for Level 2 buttons stack */
+.layout-horizontal .level-2-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm); /* 12px vertical spacing between sub-branches */
+  min-width: 180px;
+  flex-grow: 1;
+}
+
+/* SVG Connecting Lines */
+.mindmap-svg-overlay {
   position: absolute;
-  left: -20px;
-  top: 50%;
-  width: 20px;
-  height: 2px;
-  background: var(--border-color);
+  inset: 0;
+  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.mindmap-svg-path {
+  fill: none;
+  stroke: var(--line-color);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  transition: stroke var(--transition-fast), stroke-width var(--transition-fast), filter var(--transition-fast);
+}
+
+/* Selected/Active curve path styling */
+.mindmap-svg-path.active {
+  stroke: var(--line-active-color);
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.4));
 }
 
 /* Nodes styling */
@@ -79,18 +126,19 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  border-radius: 8px;
+  border-radius: var(--rounded-sm);
   padding: 10px 14px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-xs);
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-sm);
   text-align: left;
   outline: none;
+  z-index: 2; /* Sit on top of SVG lines */
 }
 
 .mindmap-node:hover {
@@ -114,7 +162,7 @@
   font-size: 14px;
   font-weight: 800;
   padding: 12px 18px;
-  border-radius: 10px;
+  border-radius: var(--rounded-md);
 }
 
 .root-node:hover {
@@ -131,30 +179,14 @@
   animation: pulseGlow 2s infinite ease-in-out;
 }
 
-.level-1 {
-  align-items: stretch;
-}
-
-.level-2-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.leaf-node {
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
 .leaf-dot {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: var(--rounded-full);
   background: var(--text-muted);
   flex-shrink: 0;
   transition: background-color var(--transition-fast);
+  z-index: 3;
 }
 
 .leaf-node:hover .leaf-dot,
@@ -163,16 +195,102 @@
   box-shadow: var(--shadow-glow-blue);
 }
 
-/* Node details box */
+/* Dragging & Grabbing cursor styles */
+.mindmap-scroll-area.pannable {
+  cursor: grab;
+}
+
+.mindmap-scroll-area.dragging {
+  cursor: grabbing;
+}
+
+/* Floating Canvas Toolbar in Top Right */
+.mindmap-canvas-toolbar {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded-md);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-lg), 0 0 15px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.theme-light .mindmap-canvas-toolbar {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow-lg), 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-color);
+  margin: 0 4px;
+}
+
+.canvas-tool-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--rounded-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.canvas-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.theme-light .canvas-tool-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.canvas-tool-btn.active {
+  background: var(--color-accent);
+  color: #ffffff;
+  box-shadow: var(--shadow-glow-blue);
+}
+
+.zoom-level-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 40px;
+  text-align: center;
+  user-select: none;
+}
+
+.mindmap-empty {
+  padding: var(--spacing-xxl);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* Restored Node details box styles */
 .node-details-box {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: var(--rounded-md);
+  padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-md);
   animation: fadeIn var(--transition-normal) forwards;
+  position: relative;
+  z-index: 5;
 }
 
 .node-details-header {
@@ -180,7 +298,7 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 8px;
+  padding-bottom: var(--spacing-xs);
 }
 
 .node-details-header h4 {
@@ -194,16 +312,31 @@
 }
 
 .play-node-btn {
-  padding: 4px 10px;
-  border-radius: 20px;
+  padding: 4px 12px;
+  border-radius: var(--rounded-xl);
   font-size: 11px;
-  height: 24px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  background: var(--color-accent);
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  transition: all var(--transition-fast);
+}
+
+.play-node-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glow-blue);
 }
 
 .node-desc {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--spacing-xs);
   font-size: 13px;
   color: var(--text-secondary);
   line-height: 1.5;
@@ -213,10 +346,4 @@
   margin-top: 3px;
   color: var(--color-accent);
   flex-shrink: 0;
-}
-
-.mindmap-empty {
-  padding: 40px;
-  text-align: center;
-  color: var(--text-muted);
 }
