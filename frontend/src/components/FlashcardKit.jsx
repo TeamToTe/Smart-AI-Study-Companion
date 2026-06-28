@@ -1,98 +1,193 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, RotateCw, HelpCircle, Award } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import './FlashcardKit.css';
 
-export default function FlashcardKit({ segments, t }) {
+export default function FlashcardKit({ segments, t, videoUrl }) {
+  const { session } = useAuth();
   const [cards, setCards] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Generate flashcards based on video content
   useEffect(() => {
     if (!segments || segments.length === 0) return;
     
-    const text = segments.map(s => s.text).join(' ').toLowerCase();
-    let generatedCards = [];
+    const fetchCards = async () => {
+      // Check cache first
+      if (videoUrl) {
+        const cacheKey = `studymind_cache_flashcard_${videoUrl.toLowerCase()}`;
+        const cachedCardsStr = localStorage.getItem(cacheKey);
+        if (cachedCardsStr) {
+          try {
+            const cachedCards = JSON.parse(cachedCardsStr);
+            if (cachedCards && cachedCards.length > 0) {
+              setCards(cachedCards);
+              setLoading(false);
+              setError(null);
+              return; // Skip fetching from API
+            }
+          } catch (e) {
+            console.error("Failed to parse cached flashcards:", e);
+          }
+        }
+      }
 
-    if (text.includes("list") || text.includes("node") || text.includes("pointer")) {
-      generatedCards = [
-        {
-          front: "What is a Linked List?",
-          back: "A linear data structure where elements (nodes) are stored non-contiguously. Each node points to the next node using a pointer."
-        },
-        {
-          front: "What does a Node in a Linked List consist of?",
-          back: "It consists of two parts: 1) Data (holds the value) and 2) Next Pointer (holds the address of the next node)."
-        },
-        {
-          front: "What is the time complexity to insert a node at the head of a Linked List?",
-          back: "O(1) - Constant time, because it only requires changing the pointer of the new node to point to the current head, and updating the head pointer."
-        },
-        {
-          front: "What is the time complexity to search for a value in a singly Linked List?",
-          back: "O(n) - Linear time, because you may need to traverse the entire list from head to tail to locate the value."
+      setLoading(true);
+      setError(null);
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
         }
-      ];
-    } else if (text.includes("fastapi") || text.includes("framework") || text.includes("endpoint")) {
-      generatedCards = [
-        {
-          front: "What is FastAPI?",
-          back: "A modern, high-performance web framework for building APIs with Python, based on standard Python type hints."
-        },
-        {
-          front: "What library does FastAPI use for data validation?",
-          back: "Pydantic. It enforces type hints at runtime and generates helpful, structured error messages for invalid requests."
-        },
-        {
-          front: "Why does FastAPI offer high performance?",
-          back: "It is built on Starlette (for web parts) and Uvicorn (ASGI server), and supports asynchronous programming natively using async/await."
-        },
-        {
-          front: "What endpoint decorator creates a new resource in REST?",
-          back: "@app.post() - Maps to the HTTP POST method which is used to submit data and create resources."
-        }
-      ];
-    } else if (text.includes("gradient") || text.includes("loss") || text.includes("network") || text.includes("neural")) {
-      generatedCards = [
-        {
-          front: "What is Gradient Descent?",
-          back: "An optimization algorithm used to minimize a model's loss function by iteratively moving parameters in the direction of the steepest decrease."
-        },
-        {
-          front: "What is a Loss Function?",
-          back: "A mathematical function that evaluates how well a machine learning algorithm models the given dataset by measuring predictions against targets."
-        },
-        {
-          front: "What is a Learning Rate?",
-          back: "A hyperparameter in gradient descent that controls the step size taken towards the minimum of the loss function during optimization."
-        },
-        {
-          front: "What is Backpropagation?",
-          back: "An algorithm used in training neural networks where gradients of the loss function with respect to weights are calculated using the chain rule, propagating errors backward."
-        }
-      ];
-    } else {
-      // Default general flashcards
-      generatedCards = [
-        {
-          front: "What is the primary benefit of Active Learning?",
-          back: "It increases comprehension and memory retention by engaging learners in the material through tasks like quizzes and flashcards rather than passive watching."
-        },
-        {
-          front: "How does 'Academic Entity Protection' help learners?",
-          back: "It prevents translation engines from corrupting technical terms (e.g. keeping 'Linked List' instead of translating it literally) to maintain learning context."
-        },
-        {
-          front: "What is a RAG pipeline?",
-          back: "Retrieval-Augmented Generation: It retrieves relevant facts from a local dataset (like transcripts) to guide an LLM to generate precise, grounded answers."
-        }
-      ];
-    }
 
-    setCards(generatedCards);
+        // Estimate video length in minutes
+        const durationSeconds = segments.length > 0 ? segments[segments.length - 1].end : 0;
+        const durationMinutes = durationSeconds / 60;
+        const numCards = Math.max(5, Math.min(10, Math.floor(5 + durationMinutes / 3)));
+
+        const queryPrompt = 
+          `Hãy tạo ra đúng ${numCards} thẻ flashcard học tập kiểm tra kiến thức của bài học này dưới dạng JSON. ` +
+          "Thẻ flashcard có hai mặt: mặt trước (front) chứa câu hỏi hoặc thuật ngữ, mặt sau (back) chứa câu trả lời hoặc định nghĩa chi tiết. " +
+          "Nội dung thẻ flashcard phải viết bằng tiếng Việt, các thuật ngữ kỹ thuật tiếng Anh gốc giữ nguyên. " +
+          "Đảm bảo ngữ nghĩa của câu được duy trì một cách hài hòa, không quá lẫn lộn tiếng Việt, tiếng Anh." +
+          "Trả về DUY NHẤT một mảng JSON hợp lệ chứa các đối tượng có cấu trúc chính xác như sau: " +
+          "[{\"front\": \"câu hỏi mặt trước\", \"back\": \"câu trả lời mặt sau\"}]. " +
+          "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô.";
+
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            query: queryPrompt,
+            segments: segments.map(s => ({ start: s.start, end: s.end, text: s.text })),
+            history: []
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch flashcards from backend.');
+        }
+
+        const data = await response.json();
+        const rawJsonText = data.response;
+
+        // Clean markdown backticks if Gemini wrapped it
+        let cleanedJson = rawJsonText.trim();
+        if (cleanedJson.startsWith("```")) {
+          cleanedJson = cleanedJson.replace(/^```(json)?\s*/i, "");
+          cleanedJson = cleanedJson.replace(/\s*```$/, "");
+        }
+        cleanedJson = cleanedJson.trim();
+
+        const parsedCards = JSON.parse(cleanedJson);
+        if (Array.isArray(parsedCards) && parsedCards.length > 0) {
+          setCards(parsedCards);
+          // Save to cache
+          if (videoUrl) {
+            const cacheKey = `studymind_cache_flashcard_${videoUrl.toLowerCase()}`;
+            localStorage.setItem(cacheKey, JSON.stringify(parsedCards));
+          }
+        } else {
+          throw new Error('Invalid flashcard format received.');
+        }
+      } catch (err) {
+        console.warn("Failed to generate dynamic flashcards, falling back to local flashcard database:", err);
+        setError(err.message || 'Failed to generate flashcards.');
+        fallbackOfflineFlashcards();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const fallbackOfflineFlashcards = () => {
+      const text = segments.map(s => s.text).join(' ').toLowerCase();
+      let generatedCards = [];
+
+      if (text.includes("list") || text.includes("node") || text.includes("pointer")) {
+        generatedCards = [
+          {
+            front: "What is a Linked List?",
+            back: "A linear data structure where elements (nodes) are stored non-contiguously. Each node points to the next node using a pointer."
+          },
+          {
+            front: "What does a Node in a Linked List consist of?",
+            back: "It consists of two parts: 1) Data (holds the value) and 2) Next Pointer (holds the address of the next node)."
+          },
+          {
+            front: "What is the time complexity to insert a node at the head of a Linked List?",
+            back: "O(1) - Constant time, because it only requires changing the pointer of the new node to point to the current head, and updating the head pointer."
+          },
+          {
+            front: "What is the time complexity to search for a value in a singly Linked List?",
+            back: "O(n) - Linear time, because you may need to traverse the entire list from head to tail to locate the value."
+          }
+        ];
+      } else if (text.includes("fastapi") || text.includes("framework") || text.includes("endpoint")) {
+        generatedCards = [
+          {
+            front: "What is FastAPI?",
+            back: "A modern, high-performance web framework for building APIs with Python, based on standard Python type hints."
+          },
+          {
+            front: "What library does FastAPI use for data validation?",
+            back: "Pydantic. It enforces type hints at runtime and generates helpful, structured error messages for invalid requests."
+          },
+          {
+            front: "Why does FastAPI offer high performance?",
+            back: "It is built on Starlette (for web parts) and Uvicorn (ASGI server), and supports asynchronous programming natively using async/await."
+          },
+          {
+            front: "What endpoint decorator creates a new resource in REST?",
+            back: "@app.post() - Maps to the HTTP POST method which is used to submit data and create resources."
+          }
+        ];
+      } else if (text.includes("gradient") || text.includes("loss") || text.includes("network") || text.includes("neural")) {
+        generatedCards = [
+          {
+            front: "What is Gradient Descent?",
+            back: "An optimization algorithm used to minimize a model's loss function by iteratively moving parameters in the direction of the steepest decrease."
+          },
+          {
+            front: "What is a Loss Function?",
+            back: "A mathematical function that evaluates how well a machine learning algorithm models the given dataset by measuring predictions against targets."
+          },
+          {
+            front: "What is a Learning Rate?",
+            back: "A hyperparameter in gradient descent that controls the step size taken towards the minimum of the loss function during optimization."
+          },
+          {
+            front: "What is Backpropagation?",
+            back: "An algorithm used in training neural networks where gradients of the loss function with respect to weights are calculated using the chain rule, propagating errors backward."
+          }
+        ];
+      } else {
+        // Default general flashcards
+        generatedCards = [
+          {
+            front: "What is the primary benefit of Active Learning?",
+            back: "It increases comprehension and memory retention by engaging learners in the material through tasks like quizzes and flashcards rather than passive watching."
+          },
+          {
+            front: "How does 'Academic Entity Protection' help learners?",
+            back: "It prevents translation engines from corrupting technical terms (e.g. keeping 'Linked List' instead of translating it literally) to maintain learning context."
+          },
+          {
+            front: "What is a RAG pipeline?",
+            back: "Retrieval-Augmented Generation: It retrieves relevant facts from a local dataset (like transcripts) to guide an LLM to generate precise, grounded answers."
+          }
+        ];
+      }
+
+      setCards(generatedCards);
+    };
+
+    fetchCards();
     setCurrentIdx(0);
     setFlipped(false);
-  }, [segments]);
+  }, [segments, session, videoUrl]);
 
   const handleNext = () => {
     if (currentIdx < cards.length - 1) {
@@ -112,8 +207,12 @@ export default function FlashcardKit({ segments, t }) {
     }
   };
 
+  if (loading) {
+    return <div className="flashcards-empty animate-pulse-glow">Generating AI Flashcards...</div>;
+  }
+
   if (cards.length === 0) {
-    return <div className="flashcards-empty">Generating Flashcards...</div>;
+    return <div className="flashcards-empty">No flashcards available.</div>;
   }
 
   const currentCard = cards[currentIdx];
