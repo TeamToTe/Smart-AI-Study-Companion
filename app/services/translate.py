@@ -76,16 +76,27 @@ async def _translate_batch_with_fallback(
         for seg in batch_segments
     )
     if lang == "vi":
-        action_instructions = """1. Scan the segments to identify machine learning, data science, mathematics, and computer science domain terms that have been translated into Vietnamese (e.g. 'hạ độ dốc', 'tốc độ học', 'mạng nơ-ron', 'lan truyền ngược', 'hàm mất mát', etc.).
+        action_instructions = """1. Scan the segments to identify domain terms from mathematics, computer science (including all relevant fields like machine learning, data science, software engineering, and hardware engineering), and economics that have been translated into Vietnamese.
 2. Translate those terms back to their original/standard English equivalents in the text.
+   Examples of translations to restore back to English:
+   - Mathematics: 'giá trị riêng' / 'vectơ riêng' -> 'eigenvalue' / 'eigenvector', 'đạo hàm' -> 'derivative', 'phân phối xác suất' -> 'probability distribution', 'độ lệch chuẩn' -> 'standard deviation', 'kỳ vọng' -> 'expectation', 'phân rã ma trận' -> 'matrix decomposition'
+   - Computer Science (Software Engineering): 'mẫu thiết kế' -> 'design pattern', 'vi dịch vụ' -> 'microservices', 'tích hợp liên tục' -> 'continuous integration', 'tái cấu trúc mã nguồn' -> 'refactoring', 'kho chứa' -> 'repository', 'giao diện' -> 'interface'
+   - Computer Science (Hardware Engineering): 'cổng logic' -> 'logic gates', 'kiến trúc tập lệnh' -> 'Instruction Set Architecture' / 'ISA', 'đường ống' -> 'pipelining', 'bộ nhớ đệm' -> 'cache', 'tương hợp bộ nhớ đệm' -> 'cache coherency'
+   - Computer Science (Machine Learning / Data Science): 'hạ độ dốc' -> 'gradient descent', 'tốc độ học' -> 'learning rate', 'mạng nơ-ron' -> 'neural networks', 'hàm mất mát' -> 'loss function', 'quá khớp' -> 'overfitting', 'lan truyền ngược' -> 'backpropagation'
+   - Economics & Finance: 'cung và cầu' -> 'supply and demand', 'tổng sản phẩm quốc nội' -> 'GDP', 'chi phí cơ hội' -> 'opportunity cost', 'cân bằng Nash' -> 'Nash equilibrium', 'giao dịch chênh lệch giá' -> 'arbitrage', 'lạm phát' -> 'inflation', 'lãi suất' -> 'interest rate'
 3. For each segment, return all such English domain words that were restored in that segment in the 'domain_words' list."""
     else:
         action_instructions = """1. Translate each segment's 'text' to Vietnamese.
-2. Crucially, keep machine learning, data science, mathematics, and computer science domain terms in English. DO NOT translate them to Vietnamese.
-   Examples: 'gradient descent', 'learning rate', 'SVD' / 'singular value decomposition', 'neural networks', 'backpropagation', 'epoch', 'batch size', 'loss function', 'overfitting', 'underfitting', etc.
+2. Crucially, keep domain terms from mathematics, computer science (including all relevant fields like machine learning, data science, software engineering, and hardware engineering), and economics in English. DO NOT translate them to Vietnamese.
+   Examples of English terms that MUST be preserved in English:
+   - Mathematics: 'eigenvalue' / 'eigenvector', 'derivative', 'probability distribution', 'standard deviation', 'variance', 'matrix decomposition', 'regression'
+   - Computer Science (Software Engineering): 'design pattern', 'microservices', 'continuous integration', 'refactoring', 'repository', 'interface', 'decoupling', 'load balancer'
+   - Computer Science (Hardware Engineering): 'logic gates', 'ALU' / 'Arithmetic Logic Unit', 'cache coherency', 'Instruction Set Architecture' / 'ISA', 'pipelining', 'registers', 'FPGA'
+   - Computer Science (Machine Learning / Data Science): 'gradient descent', 'learning rate', 'SVD' / 'singular value decomposition', 'neural networks', 'backpropagation', 'epoch', 'batch size', 'loss function', 'overfitting', 'underfitting'
+   - Economics & Finance: 'supply and demand', 'GDP' / 'Gross Domestic Product', 'opportunity cost', 'Nash equilibrium', 'arbitrage', 'inflation', 'interest rate'
 3. For each segment, return all such English domain words that were preserved in that segment in the 'domain_words' list."""
 
-    prompt = f"""You are an expert translator and computer science professor fluent in both English and Vietnamese.
+    prompt = f"""You are an expert translator, mathematics professor, computer science professor, and economics professor fluent in both English and Vietnamese.
 Your task is to process a list of timed transcription segments (maximum of 10 segments) and output a JSON response matching the specified structure.
 The final translation language MUST BE Vietnamese ('vi').
 

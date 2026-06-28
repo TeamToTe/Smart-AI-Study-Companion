@@ -9,6 +9,36 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Eased smooth scroll that doesn't trigger Chromium window scroll bug
+function smoothScrollTo(element, target, duration = 250) {
+  const start = element.scrollTop;
+  const change = target - start;
+  if (Math.abs(change) < 2) {
+    element.scrollTop = target;
+    return;
+  }
+  
+  const startTime = performance.now();
+
+  function animateScroll(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    // EaseInOutQuad
+    const ease = progress < 0.5 
+      ? 2 * progress * progress 
+      : -1 + (4 - 2 * progress) * progress;
+
+    element.scrollTop = start + change * ease;
+
+    if (progress < 1) {
+      requestAnimationFrame(animateScroll);
+    }
+  }
+
+  requestAnimationFrame(animateScroll);
+}
+
 export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc }) {
   const [activeIdx, setActiveIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -45,19 +75,9 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
       const activeLine = activeLineRef.current;
       
       const containerHeight = container.clientHeight;
+      const targetScrollTop = activeLine.offsetTop - (containerHeight / 2) + (activeLine.clientHeight / 2);
       
-      // Calculate coordinates relative to container's viewport
-      const containerRect = container.getBoundingClientRect();
-      const activeLineRect = activeLine.getBoundingClientRect();
-      
-      // relativeTop is the absolute offset of activeLine from container's scroll top
-      const relativeTop = activeLineRect.top - containerRect.top + container.scrollTop;
-      const targetScrollTop = relativeTop - (containerHeight / 2) + (activeLineRect.height / 2);
-      
-      container.scrollTo({
-        top: targetScrollTop,
-        behavior: 'smooth'
-      });
+      smoothScrollTo(container, targetScrollTop, 200);
     }
   }, [activeIdx, autoScroll]);
 

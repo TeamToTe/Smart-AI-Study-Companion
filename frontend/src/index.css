@@ -16,6 +16,26 @@
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   --shadow-glow-blue: 0 0 15px rgba(59, 130, 246, 0.3);
   --shadow-glow-emerald: 0 0 15px rgba(16, 185, 129, 0.3);
+
+  /* Design System Spacing Scale (design.md) */
+  --spacing-xxs: 4px;
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 40px;
+  --spacing-huge: 48px;
+  --spacing-massive: 56px;
+
+  /* Design System Shape Scale (design.md) */
+  --rounded-none: 0px;
+  --rounded-xs: 4px;
+  --rounded-sm: 8px;
+  --rounded-md: 12px;
+  --rounded-lg: 16px;
+  --rounded-xl: 20px;
+  --rounded-full: 9999px;
 }
 
 /* Dark Theme Variables (Default) */
@@ -147,6 +167,10 @@ body {
   animation: fadeIn var(--transition-slow) forwards;
 }
 
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
 .text-gradient {
   background: var(--gradient-accent);
   -webkit-background-clip: text;
@@ -225,6 +249,7 @@ header {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.5px;
+  cursor: pointer;
 }
 
 .logo-icon {
@@ -242,4 +267,14 @@ header {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+/* Override browser autofill styles for theme consistency */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-surface) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  transition: background-color 5000s ease-in-out 0s;
 }

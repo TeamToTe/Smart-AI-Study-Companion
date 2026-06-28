@@ -13,151 +13,26 @@ import ThemeToggle from './components/ThemeToggle';
 import LanguageToggle from './components/LanguageToggle';
 import { useAuth } from './context/AuthContext';
 import AuthModal from './components/AuthModal';
+import ConfirmModal from './components/ConfirmModal';
+import { LOCALIZATION } from './data/localization';
+import { EXAMPLES } from './data/examples';
 import './App.css';
-
-// Translation dictionary
-const LOCALIZATION = {
-  en: {
-    appName: "StudyMind",
-    tagline: "Smart AI Study Companion",
-    betaVersion: "CI 2026 Candidate",
-    heroTitlePart1: "Redefine Technical Learning with",
-    heroSubtitle: "Transform passive video lectures into active, context-aware learning. Keep academic terms protected in English, inspect explanations instantly on hover, and chat with your RAG tutor.",
-    inputPlaceholder: "Paste a YouTube lecture URL (e.g. MIT OpenCourseWare, Harvard CS50)...",
-    startStudying: "Start Studying",
-    tryTheseExamples: "Or choose one of these technical lectures to demo:",
-    analyzingVideo: "Analyzing Lecture Content...",
-    autoScroll: "Auto-Scroll",
-    noSubtitles: "No subtitles found for this segment.",
-    academicEntityProtection: "Academic Entity Protection Filter",
-    askSomethingAboutVideo: "Ask a question about the video...",
-    chatbotWelcome: "Hello! I am your AI Video Tutor. Ask me any questions about the concepts in this video, and I will search the transcript to explain them with seekable timestamp badges.",
-    tabChat: "AI Tutor",
-    tabFlashcards: "Flashcards",
-    tabQuiz: "Quiz",
-    tabMindmap: "Mindmap",
-    prev: "Prev",
-    next: "Next",
-    quizCompleted: "Quiz Completed!",
-    tryAgain: "Try Again",
-    switchToDark: "Switch to Dark Mode",
-    switchToLight: "Switch to Light Mode",
-    backToLanding: "Go Back",
-    demoBadge: "Offline Fallback Demo Mode",
-    footerText: "Developed by TeamToTe for Coding Inspiration 2026.",
-    signIn: "Sign In",
-    signOut: "Sign Out",
-    // New Translations
-    studyHistory: "Study History",
-    noHistory: "No history yet. Paste a YouTube URL above to begin!",
-    clearHistory: "Clear All",
-    studiedOn: "Studied on",
-    rateLimitTitle: "Daily Limit Reached",
-    rateLimitDesc: "To protect API limits, you are limited to 10 new video transcriptions per 24 hours. You can still study any video from your History or try the Example lectures!",
-    close: "Close",
-    videoOverlayCc: "Video Overlay CC",
-    invalidUrl: "Please enter a valid YouTube URL!",
-    feature1Title: "Interactive Subtitles",
-    feature1Desc: "Protect technical terms in English and inspect immediate translations and academic glossaries on hover.",
-    feature2Title: "AI Study Assistant",
-    feature2Desc: "Ask questions about the video and get context-aware answers with seekable timestamp bookmarks.",
-    feature3Title: "Smart Quizzes",
-    feature3Desc: "Generate custom quizzes based on lecture contents to test your understanding.",
-    feature4Title: "Concept Mindmaps",
-    feature4Desc: "Generate visual concept graphs dynamically linked to key timestamps in the video.",
-    // Loader Steps
-    loaderStep1: "Validating YouTube video details...",
-    loaderStep2: "Checking for pre-existing English / Vietnamese subtitles...",
-    loaderStep3: "Fallback: Accessing audio stream (skip download)...",
-    loaderStep4: "Uploading audio stream to Gemini File API...",
-    loaderStep5: "Running Speech-to-Text via Gemini Flash (preserving engineering glossary)...",
-    loaderStep6: "Splitting transcript & building semantic vector index..."
-  },
-  vi: {
-    appName: "StudyMind",
-    tagline: "Trợ Lý Học Tập AI Thông Minh",
-    betaVersion: "Ứng Viên CI 2026",
-    heroTitlePart1: "Định Nghĩa Lại Cách Học Kỹ Thuật Qua",
-    heroSubtitle: "Chuyển hóa phương thức xem bài giảng thụ động thành môi trường học tập tương tác chủ động. Bảo vệ thực thể chuyên môn, hover xem giải nghĩa glossary thuật ngữ chuyên ngành tức thì.",
-    inputPlaceholder: "Dán đường dẫn video YouTube bài giảng (ví dụ MIT OpenCourseWare, Harvard CS50)...",
-    startStudying: "Bắt Đầu Học",
-    tryTheseExamples: "Hoặc chọn một trong các bài giảng kỹ thuật mẫu dưới đây:",
-    analyzingVideo: "Đang Phân Tích Bài Giảng...",
-    autoScroll: "Cuộn tự động",
-    noSubtitles: "Không tìm thấy phụ đề cho đoạn này.",
-    academicEntityProtection: "Bộ Lọc Bảo Vệ Thuật Ngữ Chuyên Ngành",
-    askSomethingAboutVideo: "Đặt câu hỏi về nội dung video...",
-    chatbotWelcome: "Xin chào! Tôi là Trợ Lý Học Tập AI của bạn. Hãy hỏi tôi bất kỳ câu hỏi nào về các khái niệm trong bài học, tôi sẽ tìm trong phụ đề và giải nghĩa kèm link timestamp.",
-    tabChat: "AI Hỏi Đáp",
-    tabFlashcards: "Flashcards",
-    tabQuiz: "Quiz Trắc Nghiệm",
-    tabMindmap: "Sơ Đồ Tư Duy",
-    prev: "Trước",
-    next: "Sau",
-    quizCompleted: "Hoàn Thành Bài Test!",
-    tryAgain: "Làm lại",
-    switchToDark: "Chuyển sang chế độ tối",
-    switchToLight: "Chuyển sang chế độ sáng",
-    backToLanding: "Quay lại",
-    demoBadge: "Chế Độ Chạy Thử Fallback",
-    footerText: "Phát triển bởi Đội thi TeamToTe - Cuộc thi Coding Inspiration 2026.",
-    signIn: "Đăng Nhập",
-    signOut: "Đăng Xuất",
-    // New Translations
-    studyHistory: "Lịch Sử Học Tập",
-    noHistory: "Chưa có lịch sử học tập. Hãy dán link YouTube ở trên để bắt đầu!",
-    clearHistory: "Xóa Tất Cả",
-    studiedOn: "Học ngày",
-    rateLimitTitle: "Đạt Giới Hạn Sử Dụng",
-    rateLimitDesc: "Để tránh quá tải hạn ngạch (Rate Limit) API của hệ thống, bạn chỉ được dịch tối đa 10 video mới trong vòng 24 giờ. Bạn vẫn có thể học lại các video trong Lịch sử hoặc chọn các bài giảng mẫu!",
-    close: "Đóng",
-    videoOverlayCc: "Phụ đề trên Video",
-    invalidUrl: "Vui lòng nhập đường dẫn YouTube hợp lệ!",
-    feature1Title: "Phụ Đề Tương Tác",
-    feature1Desc: "Bảo vệ thuật ngữ tiếng Anh gốc và tra cứu định nghĩa glossary tức thì khi hover chuột.",
-    feature2Title: "Trợ Lý Học Tập AI",
-    feature2Desc: "Hỏi đáp về nội dung bài giảng, nhận câu trả lời thông minh đính kèm timestamp chuyển tua video.",
-    feature3Title: "Trắc Nghiệm Thông Minh",
-    feature3Desc: "Tự động tạo câu hỏi trắc nghiệm từ nội dung bài giảng để kiểm tra mức độ tiếp thu.",
-    feature4Title: "Sơ Đồ Tư Duy",
-    feature4Desc: "Tạo biểu đồ tư duy trực quan liên kết trực tiếp tới các phân cảnh chính của video.",
-    // Loader Steps
-    loaderStep1: "Đang xác thực thông tin liên kết YouTube...",
-    loaderStep2: "Kiểm tra sự tồn tại của phụ đề tiếng Anh / tiếng Việt gốc...",
-    loaderStep3: "Dự phòng: Trích xuất luồng âm thanh từ video (bất đồng bộ)...",
-    loaderStep4: "Đang tải tệp âm thanh lên Gemini File API...",
-    loaderStep5: "Khởi chạy Gemini Flash Audio Speech-to-Text (bảo vệ glossary thuật ngữ)...",
-    loaderStep6: "Phân mảnh văn bản (chunking) & tạo lập Vector Index..."
-  }
-};
-
-const EXAMPLES = [
-  {
-    title: "Data Structures & Algorithms - Harvard CS50",
-    url: "https://www.youtube.com/watch?v=RBSGKlAboiM"
-  },
-  {
-    title: "FastAPI Complete Tutorial for Beginners",
-    url: "https://www.youtube.com/watch?v=tLKKmCO9_p4"
-  },
-  {
-    title: "Neural Networks from Scratch (3Blue1Brown)",
-    url: "https://www.youtube.com/watch?v=aircAruvnKk"
-  }
-];
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('studymind_theme') || 'light';
   });
-  const [lang, setLang] = useState('vi'); // Default to Vietnamese
+  const [lang, setLang] = useState(() => {
+    return localStorage.getItem('studymind_lang') || 'vi';
+  });
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [seekTime, setSeekTime] = useState(null);
   const [segments, setSegments] = useState([]);
-  const [activeTab, setActiveTab] = useState('chat');
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [activeTab, setActiveTab] = useState(() => {
+    return sessionStorage.getItem('studymind_active_tab') || 'chat';
+  });
   
   const [isProcessed, setIsProcessed] = useState(false);
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
@@ -165,8 +40,20 @@ export default function App() {
   const [videoOverlayCc, setVideoOverlayCc] = useState(false);
   
   // Auth state
-  const { user, session, signOut } = useAuth();
+  const { user, session, signOut, loading: authLoading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Custom Modal States (Confirm/Alert)
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    confirmText: "Yes",
+    cancelText: "No",
+    showCancel: true,
+    onConfirm: null,
+    onCancel: null
+  });
   
   // History & Rate Limit States
   const [history, setHistory] = useState([]);
@@ -182,6 +69,16 @@ export default function App() {
     localStorage.setItem('studymind_theme', theme);
   }, [theme]);
 
+  // Save language preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('studymind_lang', lang);
+  }, [lang]);
+
+  // Save active tab preference to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('studymind_active_tab', activeTab);
+  }, [activeTab]);
+
   // 2. Load History on Mount
   useEffect(() => {
     const savedHistory = localStorage.getItem('studymind_history');
@@ -196,6 +93,8 @@ export default function App() {
 
   // Sync routing on initial load
   useEffect(() => {
+    if (authLoading) return;
+
     const path = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
     const videoUrl = params.get('v');
@@ -219,10 +118,12 @@ export default function App() {
       window.history.replaceState({}, '', '/');
       setCurrentPath('/');
     }
-  }, []);
+  }, [authLoading]);
 
   // Listen to browser Back/Forward navigation
   useEffect(() => {
+    if (authLoading) return;
+
     const handlePopState = () => {
       const path = window.location.pathname;
       const params = new URLSearchParams(window.location.search);
@@ -245,7 +146,7 @@ export default function App() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [url]);
+  }, [url, authLoading]);
 
   // 3. Translation utility
   const t = (key) => {
@@ -345,7 +246,6 @@ export default function App() {
     setLoading(true);
     setIsProcessed(false);
     setPendingWorkspaceData(null);
-    setIsDemoMode(false);
     setSegments([]);
     setProgress(0);
 
@@ -359,7 +259,6 @@ export default function App() {
 
     let fetchedSegments = null;
     let videoTitle = "Video Lecture";
-    let demoIntervalId = null;
 
     // Set custom titles based on example URLs
     const matchedExample = EXAMPLES.find(ex => ex.url.toLowerCase() === submittedUrl.toLowerCase());
@@ -388,13 +287,13 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Backend failed or not running');
+        throw new Error(lang === 'vi' ? 'Yêu cầu phân tích video thất bại.' : 'Backend request failed.');
       }
 
       const data = await response.json();
       const taskId = data.task_id;
       if (!taskId) {
-        throw new Error('No task ID returned by backend');
+        throw new Error(lang === 'vi' ? 'Không nhận được Task ID từ máy chủ.' : 'No task ID returned.');
       }
 
       // Poll task status
@@ -414,7 +313,7 @@ export default function App() {
           headers: statusHeaders
         });
         if (!statusResponse.ok) {
-          throw new Error('Failed to fetch task status');
+          throw new Error(lang === 'vi' ? 'Lỗi kiểm tra tiến độ tác vụ.' : 'Failed to fetch task status.');
         }
         
         const statusData = await statusResponse.json();
@@ -425,42 +324,24 @@ export default function App() {
           taskCompleted = true;
           taskResult = statusData.result;
         } else if (statusData.status === 'FAILURE') {
-          throw new Error(statusData.result?.error || 'Task failed on backend');
+          throw new Error(statusData.result?.error || (lang === 'vi' ? 'Tác vụ thất bại trên hệ thống.' : 'Task failed on backend.'));
         } else if (statusData.status === 'REVOKED') {
-          throw new Error('Task was cancelled');
+          throw new Error(lang === 'vi' ? 'Tác vụ đã bị hủy bỏ.' : 'Task was cancelled.');
         }
       }
 
       if (taskResult && taskResult.segments && taskResult.segments.length > 0) {
         fetchedSegments = taskResult.segments;
       } else {
-        throw new Error('No segments found in task result');
+        throw new Error(lang === 'vi' ? 'Không tìm thấy dữ liệu phụ đề.' : 'No segments found.');
       }
-    } catch (err) {
-      console.warn('Backend API request failed. Falling back to frontend mock data for demo.', err);
-      setIsDemoMode(true);
-      const mockSegments = getMockSegmentsForUrl(submittedUrl);
-      fetchedSegments = mockSegments;
-      
-      // Simulate progress for Demo Mode
-      setProgress(0);
-      demoIntervalId = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 95) {
-            if (demoIntervalId) clearInterval(demoIntervalId);
-            return 95;
-          }
-          return prev + 5;
-        });
-      }, 200);
-    } finally {
+
       // Keep loader visible for a minimum of 4 seconds to show the beautiful terminal animation
       const elapsed = Date.now() - startTime;
       const minDuration = 4000;
       const remainingTime = Math.max(0, minDuration - elapsed);
       
       setTimeout(() => {
-        if (demoIntervalId) clearInterval(demoIntervalId);
         setIsProcessed(true);
         setProgress(100);
         setPendingWorkspaceData({
@@ -469,6 +350,29 @@ export default function App() {
           segments: fetchedSegments
         });
       }, remainingTime);
+
+    } catch (err) {
+      console.error('Backend transcription failed:', err);
+      // Reset state and return to landing
+      setUrl('');
+      setSegments([]);
+      setCurrentTime(0);
+      setActiveTab('chat');
+      setCurrentPath('/');
+      setLoading(false);
+      setIsProcessed(false);
+      setProgress(0);
+
+      // Show custom alert dialog
+      setModalConfig({
+        isOpen: true,
+        title: lang === 'vi' ? 'Lỗi Phân Tích' : 'Analysis Error',
+        message: err.message || (lang === 'vi' ? 'Không thể kết nối đến máy chủ phân tích.' : 'Could not connect to the transcription server.'),
+        confirmText: lang === 'vi' ? 'Đóng' : 'Close',
+        showCancel: false,
+        onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })),
+        onCancel: null
+      });
     }
   };
 
@@ -510,24 +414,48 @@ export default function App() {
 
   const deleteHistoryItem = (urlToDelete, e) => {
     e.stopPropagation(); // Avoid triggering loading the video
-    setHistory(prev => {
-      const updated = prev.filter(item => item.url !== urlToDelete);
-      localStorage.setItem('studymind_history', JSON.stringify(updated));
-      return updated;
+    setModalConfig({
+      isOpen: true,
+      title: lang === 'vi' ? 'Xóa Bài Giảng' : 'Delete Video',
+      message: t('confirmDeleteVideo'),
+      confirmText: lang === 'vi' ? 'Xóa' : 'Delete',
+      cancelText: lang === 'vi' ? 'Hủy' : 'Cancel',
+      showCancel: true,
+      onConfirm: () => {
+        setHistory(prev => {
+          const updated = prev.filter(item => item.url !== urlToDelete);
+          localStorage.setItem('studymind_history', JSON.stringify(updated));
+          return updated;
+        });
+        localStorage.removeItem(`studymind_cache_segments_${urlToDelete.toLowerCase()}`);
+        setModalConfig(prev => ({ ...prev, isOpen: false }));
+      },
+      onCancel: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
     });
-    localStorage.removeItem(`studymind_cache_segments_${urlToDelete.toLowerCase()}`);
   };
 
   const clearHistory = () => {
-    localStorage.removeItem('studymind_history');
-    // Clear all cached segments keys
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('studymind_cache_segments_')) {
-        localStorage.removeItem(key);
-      }
-    }
-    setHistory([]);
+    setModalConfig({
+      isOpen: true,
+      title: lang === 'vi' ? 'Xóa Lịch Sử' : 'Clear History',
+      message: t('confirmClearHistory'),
+      confirmText: lang === 'vi' ? 'Xóa Tất Cả' : 'Clear All',
+      cancelText: lang === 'vi' ? 'Hủy' : 'Cancel',
+      showCancel: true,
+      onConfirm: () => {
+        localStorage.removeItem('studymind_history');
+        // Clear all cached segments keys
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('studymind_cache_segments_')) {
+            localStorage.removeItem(key);
+          }
+        }
+        setHistory([]);
+        setModalConfig(prev => ({ ...prev, isOpen: false }));
+      },
+      onCancel: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+    });
   };
 
   const handleSeek = (time) => {
@@ -551,7 +479,7 @@ export default function App() {
     <div className="app-wrapper">
       {/* Sleek App Header */}
       <header className="glass">
-        <div className="logo" onClick={handleBackToLanding} style={{ cursor: 'pointer' }}>
+        <div className="logo" onClick={handleBackToLanding}>
           <div className="logo-icon">
             <BookOpen size={16} fill="white" />
           </div>
@@ -559,12 +487,6 @@ export default function App() {
         </div>
 
         <div className="header-controls">
-          {isDemoMode && url && !loading && (
-            <span className="demo-badge">
-              <Sparkles size={12} style={{ animation: 'pulseGlow 2s infinite' }} />
-              {t('demoBadge')}
-            </span>
-          )}
           <LanguageToggle lang={lang} setLang={setLang} />
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
           
@@ -643,18 +565,18 @@ export default function App() {
               {/* Right Column: Interactive Study Kits */}
               <div className="right-column">
                 <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} t={t}>
-                  {activeTab === 'chat' && (
+                  <div style={{ display: activeTab === 'chat' ? 'block' : 'none', height: '100%' }}>
                     <RAGChatbot segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
-                  )}
-                  {activeTab === 'flashcards' && (
+                  </div>
+                  <div style={{ display: activeTab === 'flashcards' ? 'block' : 'none', height: '100%' }}>
                     <FlashcardKit segments={segments} t={t} />
-                  )}
-                  {activeTab === 'quiz' && (
-                    <QuizKit segments={segments} t={t} />
-                  )}
-                  {activeTab === 'mindmap' && (
+                  </div>
+                  <div style={{ display: activeTab === 'quiz' ? 'block' : 'none', height: '100%' }}>
+                    <QuizKit segments={segments} t={t} videoUrl={url} />
+                  </div>
+                  <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
                     <MindmapKit segments={segments} onSeek={handleSeek} t={t} />
-                  )}
+                  </div>
                 </SidebarTabs>
               </div>
             </div>
@@ -683,6 +605,18 @@ export default function App() {
         <p>{t('footerText')} &copy; 2026 | <a href="https://github.com/TeamToTe/Smart-AI-Study-Companion" target="_blank" rel="noreferrer">GitHub Repository</a></p>
       </footer>
 
+      {/* Custom Confirmation / Alert Modal */}
+      <ConfirmModal 
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        confirmText={modalConfig.confirmText}
+        cancelText={modalConfig.cancelText}
+        showCancel={modalConfig.showCancel}
+        onConfirm={modalConfig.onConfirm}
+        onCancel={modalConfig.onCancel}
+      />
+
       {/* Auth Modal */}
       <AuthModal 
         isOpen={isAuthModalOpen} 
@@ -693,74 +627,4 @@ export default function App() {
   );
 }
 
-// Mock transcript generator for demo mode (Harvard CS50, FastAPI, 3Blue1Brown Neural Networks)
-function getMockSegmentsForUrl(url) {
-  const lowercaseUrl = url.toLowerCase();
 
-  // 1. Harvard CS50: Linked List
-  if (lowercaseUrl.includes("rbsgklaboim") || lowercaseUrl.includes("list") || lowercaseUrl.includes("cs50")) {
-    return [
-      { start: 0, end: 12, text: "Welcome back to CS50. Today we are going to explore data structures, specifically the linked list." },
-      { start: 13, end: 28, text: "In computer science, a linked list is a linear data structure that consists of elements called nodes." },
-      { start: 29, end: 44, text: "Unlike standard arrays, these nodes are not stored in contiguous chunks of memory." },
-      { start: 45, end: 60, text: "Instead, each node has a pointer that holds the memory address of the next node in the list." },
-      { start: 61, end: 75, text: "The first node is referred to as the head, and the final node points to NULL." },
-      { start: 76, end: 92, text: "Let us see what happens when we want to insert a node. This operation is dynamic." },
-      { start: 93, end: 110, text: "If we insert a node at the head of the list, we simply set the new node's next pointer to the current head." },
-      { start: 111, end: 130, text: "Then, we update the head pointer to address the new node. This runs in O(1) constant time complexity." },
-      { start: 131, end: 152, text: "If we delete a node, we must change the preceding node's pointer to bypass the deleted node." },
-      { start: 153, end: 172, text: "This re-linking of pointers ensures memory is managed cleanly, avoiding memory leaks." },
-      { start: 173, end: 195, text: "However, to search for a value in a linked list, we cannot use index arithmetic like arrays." },
-      { start: 196, end: 215, text: "We must start at the head node and traverse through next pointers one-by-one." },
-      { start: 216, end: 238, text: "Thus, the search time complexity is O(n), where n is the number of nodes in the list." },
-      { start: 239, end: 260, text: "This trade-off is crucial to evaluate when designing software algorithms for datasets." }
-    ];
-  }
-
-  // 2. FastAPI Tutorial
-  if (lowercaseUrl.includes("tlkkmco9_p4") || lowercaseUrl.includes("fastapi")) {
-    return [
-      { start: 0, end: 14, text: "Welcome to this complete tutorial. We will build a production-ready API using the FastAPI framework." },
-      { start: 15, end: 32, text: "FastAPI is a modern web framework designed for building REST APIs with Python 3.8+." },
-      { start: 33, end: 48, text: "It is extremely fast, powered by Starlette for web routes and Uvicorn for ASGI execution." },
-      { start: 49, end: 68, text: "One of its key features is declarative validation, which is handled automatically by Pydantic." },
-      { start: 69, end: 85, text: "By using standard Python type hints, Pydantic parses and validates client inputs." },
-      { start: 86, end: 104, text: "Let us define a schema for a new user request using Pydantic models." },
-      { start: 105, end: 125, text: "If a request fails validation, FastAPI returns a 422 error detailing the invalid parameters." },
-      { start: 126, end: 145, text: "FastAPI also supports native asynchronous programming out of the box using async/await." },
-      { start: 146, end: 165, text: "We can define our endpoints as async def to handle I/O bound queries concurrently." },
-      { start: 166, end: 185, text: "To create resources, we map endpoints to POST routers. Let us write @app.post() for users." },
-      { start: 186, end: 205, text: "FastAPI also has a powerful dependency injection system declared via Depends()." },
-      { start: 206, end: 228, text: "We can inject services, database sessions, or security protocols cleanly into our endpoint signatures." }
-    ];
-  }
-
-  // 3. 3Blue1Brown Neural Network
-  if (lowercaseUrl.includes("aircaruvnkk") || lowercaseUrl.includes("neural") || lowercaseUrl.includes("brown")) {
-    return [
-      { start: 0, end: 11, text: "What is a neural network? Let's break down the mathematical fundamentals from scratch." },
-      { start: 12, end: 28, text: "A neural network consists of layers of nodes. We pass inputs, multiply them by weights, and add biases." },
-      { start: 29, end: 45, text: "To evaluate our network's predictions against the actual target, we use a loss function." },
-      { start: 46, end: 65, text: "The loss function measures the error. A smaller loss value means our neural predictions are accurate." },
-      { start: 66, end: 89, text: "To train the network, we must minimize this loss function. That is where gradient descent comes in." },
-      { start: 90, end: 104, text: "Gradient descent is an optimization algorithm that calculates the gradient direction of steepest descent." },
-      { start: 105, end: 122, text: "We update our weights by taking a step proportional to the negative gradient slope." },
-      { start: 123, end: 139, text: "The step size is controlled by a hyperparameter called the learning rate." },
-      { start: 140, end: 158, text: "If the learning rate is too small, gradient descent takes too long to converge." },
-      { start: 159, end: 178, text: "If the learning rate is too large, the optimizer may overshoot the minimum and diverge." },
-      { start: 179, end: 198, text: "During the training loop, inputs are fed forward in the forward pass to compute output loss." },
-      { start: 199, end: 218, text: "Then, the errors are propagated back in backpropagation, updating weights at each layer." },
-      { start: 219, end: 238, text: "This cycle of updates iteratively decreases training loss, training our model to learn patterns." }
-    ];
-  }
-
-  // 4. Default Fallback
-  return [
-    { start: 0, end: 10, text: "Welcome to StudyMind. Paste a valid technical YouTube lecture to load transcriptions." },
-    { start: 11, end: 25, text: "This AI study companion is designed to protect academic entities and optimize technical translations." },
-    { start: 26, end: 40, text: "You can hover over terms like linked list or gradient descent to see definitions." },
-    { start: 41, end: 55, text: "Use the AI Tutor sidebar on the right to query the transcript context with timestamp seekers." },
-    { start: 56, end: 75, text: "The app also compiles flashcards, quizzes, and a conceptual mindmap based on transcript facts." },
-    { start: 76, end: 95, text: "Click on any timestamp or mindmap node to seek the video to that exact point." }
-  ];
-}
