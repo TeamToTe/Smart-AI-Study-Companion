@@ -569,13 +569,13 @@ export default function App() {
                     <RAGChatbot segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
                   </div>
                   <div style={{ display: activeTab === 'flashcards' ? 'block' : 'none', height: '100%' }}>
-                    <FlashcardKit segments={segments} t={t} />
+                    <FlashcardKit segments={segments} t={t} videoUrl={url} />
                   </div>
                   <div style={{ display: activeTab === 'quiz' ? 'block' : 'none', height: '100%' }}>
                     <QuizKit segments={segments} t={t} videoUrl={url} />
                   </div>
                   <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
-                    <MindmapKit segments={segments} onSeek={handleSeek} t={t} />
+                    <MindmapKit segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
                   </div>
                 </SidebarTabs>
               </div>
