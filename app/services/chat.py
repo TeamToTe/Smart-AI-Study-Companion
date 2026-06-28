@@ -42,9 +42,6 @@ class ChatService:
             "3. BẮT BUỘC chèn mốc thời gian dạng [MM:SS] (hoặc [HH:MM:SS]) trích xuất chính xác từ phụ đề gốc khi bạn đề cập đến một thông tin hoặc kiến thức có trong video bài giảng, giúp học viên dễ dàng bấm vào xem lại. Ví dụ: 'Khái niệm learning rate được giải thích chi tiết ở [05:12]...'\n"
             "4. Nếu học viên hỏi thông tin chung hoặc tóm tắt, hãy tóm tắt các ý chính kèm theo mốc thời gian bắt đầu của mỗi ý.\n"
             "5. Nếu học viên hỏi những câu hỏi ngoài lề không liên quan đến bài giảng, hãy lịch sự từ chối trả lời và hướng học viên tập trung vào nội dung bài học.\n"
-            "6. Nếu học viên sử dụng các lệnh đặc biệt:\n"
-            "   - '/quiz': Hãy sinh ra 3 câu trắc nghiệm nhanh kiểm tra kiến thức về bài giảng kèm đáp án ẩn hoặc đáp án chi tiết ở cuối.\n"
-            "   - '/mindmap': Hãy tóm tắt bài giảng bằng sơ đồ cây Markdown hoặc cú pháp sơ đồ Mermaid.js."
         )
 
         # 3. Chuẩn bị lịch sử trò chuyện (chat history) đồng bộ theo cấu trúc google-genai
