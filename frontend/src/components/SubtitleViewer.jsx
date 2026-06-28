@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Play, Volume2, ShieldCheck, HelpCircle } from 'lucide-react';
 import { GLOSSARY } from '../data/glossary';
+import { useAuth } from '../context/AuthContext';
 import GlossaryTooltip from './GlossaryTooltip';
 import './SubtitleViewer.css';
 
@@ -40,11 +41,13 @@ function smoothScrollTo(element, target, duration = 250) {
 }
 
 export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc }) {
+  const { session } = useAuth();
   const [activeIdx, setActiveIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(true);
   const [hoveredTerm, setHoveredTerm] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [dynamicGlossary, setDynamicGlossary] = useState({});
   
   const containerRef = useRef(null);
   const activeLineRef = useRef(null);
@@ -89,14 +92,22 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
   };
 
   // 4. Parse text and inject glossary highlights
-  const renderHighlightedText = (text) => {
-    const sortedTerms = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
+  const renderHighlightedText = (text, domainWords = []) => {
+    const glossaryTerms = Object.keys(GLOSSARY);
+    const combinedTerms = [...new Set([...glossaryTerms, ...(domainWords || [])])];
+    const sortedTerms = combinedTerms.filter(Boolean).sort((a, b) => b.length - a.length);
+    if (sortedTerms.length === 0) return text;
+
     const regex = new RegExp(`\\b(${sortedTerms.map(escapeRegExp).join('|')})\\b`, 'gi');
     const parts = text.split(regex);
 
     return parts.map((part, index) => {
       const lowerPart = part.toLowerCase();
-      if (GLOSSARY[lowerPart]) {
+      const isGlossary = !!GLOSSARY[lowerPart];
+      const isDynamic = !!dynamicGlossary[lowerPart];
+      const isDomainWord = (domainWords || []).some(dw => dw.toLowerCase() === lowerPart);
+
+      if (isGlossary || isDynamic || isDomainWord) {
         return (
           <span 
             key={index} 
@@ -112,7 +123,93 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
     });
   };
 
-  // 5. Glossary hover handlers
+  // 5. Fetch dynamic definitions from Gemini
+  const fetchDynamicDefinition = async (term) => {
+    const lowerKey = term.toLowerCase();
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const queryPrompt = 
+        `Hãy định nghĩa ngắn gọn thuật ngữ kỹ thuật sau đây trong ngữ cảnh bài học: "${term}". ` +
+        "Bản dịch tiếng Việt và định nghĩa phải ngắn gọn (khoảng 15-20 từ). " +
+        "Trả về DUY NHẤT một đối tượng JSON hợp lệ chứa cấu trúc chính xác như sau: " +
+        `{"term": "${term}", "translation": "bản dịch tiếng Việt", "definition": "định nghĩa ngắn gọn", "category": "lĩnh vực chuyên ngành"}. ` +
+        "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô.";
+
+      // Provide context from the first few segments to help Gemini understand the domain
+      const contextSegments = segments ? segments.slice(0, 15).map(s => ({ text: s.text })) : [];
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query: queryPrompt,
+          segments: contextSegments,
+          history: []
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data = await response.json();
+      const rawJsonText = data.response;
+
+      // Clean markdown code blocks if wrapped
+      let cleanedJson = rawJsonText.trim();
+      if (cleanedJson.startsWith("```")) {
+        cleanedJson = cleanedJson.replace(/^```(json)?\s*/i, "");
+        cleanedJson = cleanedJson.replace(/\s*```$/, "");
+      }
+      cleanedJson = cleanedJson.trim();
+
+      const parsedDef = JSON.parse(cleanedJson);
+      if (parsedDef && parsedDef.term) {
+        const termData = {
+          term: parsedDef.term || term,
+          translation: parsedDef.translation || term,
+          definition: parsedDef.definition || "Thuật ngữ trong bài học.",
+          category: parsedDef.category || "Chuyên ngành"
+        };
+
+        setDynamicGlossary(prev => ({
+          ...prev,
+          [lowerKey]: termData
+        }));
+
+        setHoveredTerm(prev => {
+          if (prev && prev.term.toLowerCase() === lowerKey) {
+            return termData;
+          }
+          return prev;
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to fetch dynamic definition:", err);
+      const fallbackDef = {
+        term: term,
+        translation: term,
+        definition: "Thuật ngữ chuyên ngành trong bài giảng.",
+        category: "General"
+      };
+      setDynamicGlossary(prev => ({
+        ...prev,
+        [lowerKey]: fallbackDef
+      }));
+      setHoveredTerm(prev => {
+        if (prev && prev.term.toLowerCase() === lowerKey) {
+          return fallbackDef;
+        }
+        return prev;
+      });
+    }
+  };
+
+  // 6. Glossary hover handlers
   const handleMouseEnter = (e, termKey) => {
     const rect = e.target.getBoundingClientRect();
     const tooltipWidth = 280;
@@ -126,9 +223,22 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
     x = Math.max(10, Math.min(x, window.innerWidth - tooltipWidth - 10));
     y = Math.max(10, y);
 
-    setHoveredTerm(GLOSSARY[termKey]);
-    setTooltipPos({ x, y });
-    setTooltipVisible(true);
+    const lowerKey = termKey.toLowerCase();
+
+    if (GLOSSARY[lowerKey]) {
+      setHoveredTerm(GLOSSARY[lowerKey]);
+      setTooltipPos({ x, y });
+      setTooltipVisible(true);
+    } else if (dynamicGlossary[lowerKey]) {
+      setHoveredTerm(dynamicGlossary[lowerKey]);
+      setTooltipPos({ x, y });
+      setTooltipVisible(true);
+    } else {
+      setHoveredTerm({ term: termKey, loading: true });
+      setTooltipPos({ x, y });
+      setTooltipVisible(true);
+      fetchDynamicDefinition(termKey);
+    }
   };
 
   const handleMouseLeave = () => {
@@ -180,12 +290,12 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
                 <div className="subtitle-content">
                   {/* Original English Text (Entity-Protected) */}
                   <p className="sub-text-en">
-                    {renderHighlightedText(seg.original_text || seg.text)}
+                    {renderHighlightedText(seg.original_text || seg.text, seg.domain_words)}
                   </p>
                   {/* Vietnamese Context-aware Translation */}
                   {lang === 'vi' && (
                     <p className="sub-text-vi">
-                      {seg.original_text ? seg.text : getMockTranslation(seg.text)}
+                      {renderHighlightedText(seg.original_text ? seg.text : getMockTranslation(seg.text), seg.domain_words)}
                     </p>
                   )}
                 </div>

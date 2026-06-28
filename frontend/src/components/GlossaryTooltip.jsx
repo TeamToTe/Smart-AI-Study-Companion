@@ -14,18 +14,27 @@ export default function GlossaryTooltip({ termData, position, visible }) {
         position: 'fixed' // Fixed positioning works best with viewport bounds
       }}
     >
-      <div className="tooltip-header">
-        <span className="term-en">{termData.term}</span>
-        <span className="term-category">{termData.category}</span>
-      </div>
-      <div className="tooltip-body">
-        <div className="term-vi-wrapper">
-          <span className="translation-tag">VI</span>
-          <p className="term-vi">{termData.translation}</p>
+      {termData.loading ? (
+        <div className="tooltip-loading">
+          <div className="spinner"></div>
+          <span>Đang tra cứu từ điển AI...</span>
         </div>
-        <p className="term-desc">{termData.definition}</p>
-      </div>
-      <div className="tooltip-arrow"></div>
+      ) : (
+        <>
+          <div className="tooltip-header">
+            <span className="term-en">{termData.term}</span>
+            <span className="term-category">{termData.category}</span>
+          </div>
+          <div className="tooltip-body">
+            <div className="term-vi-wrapper">
+              <span className="translation-tag">VI</span>
+              <p className="term-vi">{termData.translation}</p>
+            </div>
+            <p className="term-desc">{termData.definition}</p>
+          </div>
+          <div className="tooltip-arrow"></div>
+        </>
+      )}
     </div>
   );
 }
