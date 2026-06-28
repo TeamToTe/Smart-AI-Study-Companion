@@ -22,3 +22,8 @@ class HistoryMessage(BaseModel):
 class ChatHistoryResponse(BaseModel):
     session_id: str = Field(..., description="ID phiên chat")
     messages: List[HistoryMessage] = Field(..., description="Lịch sử các tin nhắn")
+
+class RawChatRequest(BaseModel):
+    query: str = Field(..., description="Câu hỏi hoặc prompt gửi tới Gemini")
+    segments: List[ChatSegment] = Field(..., description="Danh sách các đoạn phụ đề của bài giảng")
+

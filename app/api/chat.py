@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from typing import Optional
 from fastapi.security import HTTPAuthorizationCredentials
-from app.schemas.chat import ChatRequest, ChatResponse, ChatHistoryResponse, HistoryMessage
+from app.schemas.chat import ChatRequest, ChatResponse, ChatHistoryResponse, HistoryMessage, RawChatRequest
 from app.services.chat import ChatService, get_chat_service
 from app.services.database import DatabaseService
 from app.core.auth import get_current_user, security
@@ -68,3 +68,20 @@ async def chat_with_assistant(
     
     token = credentials.credentials
     return await service.get_chat_response(payload, token, db_service)
+
+@router.post(
+    "/chat/raw",
+    response_model=ChatResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Gửi câu hỏi hoặc prompt thô tới Gemini không lưu lịch sử",
+    description="Thực hiện gọi Gemini trực tiếp để trả về câu trả lời mà không ghi nhận lịch sử vào database Supabase.",
+)
+async def chat_raw(
+    payload: RawChatRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    service: ChatService = Depends(get_chat_service),
+) -> ChatResponse:
+    # Xác thực token người dùng
+    get_current_user(credentials)
+    
+    return await service.get_raw_gemini_response(payload)

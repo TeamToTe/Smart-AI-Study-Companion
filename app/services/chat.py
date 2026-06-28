@@ -2,7 +2,7 @@ import logging
 from google import genai
 from google.genai import types
 from fastapi import HTTPException, status
-from app.schemas.chat import ChatRequest, ChatResponse
+from app.schemas.chat import ChatRequest, ChatResponse, RawChatRequest
 from app.core.key_rotation import get_gemini_api_key
 from app.services.database import DatabaseService
 
@@ -117,6 +117,77 @@ class ChatService:
                 await client.aio.aclose()
             except Exception as e:
                 logger.warning(f"Failed to close Gemini API client connection: {e}")
+
+    async def get_raw_gemini_response(self, payload: RawChatRequest) -> ChatResponse:
+        """
+        Gửi prompt và ngữ cảnh phụ đề trực tiếp tới Gemini mà không đọc/ghi lịch sử vào database.
+        Phù hợp cho các tác vụ tiện ích như sinh sơ đồ tư duy (Mindmap) hay thẻ học tập (Flashcard).
+        """
+        api_key = get_gemini_api_key()
+        if not api_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Gemini API Key is not configured."
+            )
+            
+        client = genai.Client(api_key=api_key)
+        
+        # 1. Định dạng phụ đề
+        transcript_context = ""
+        for seg in payload.segments:
+            m = int(seg.start // 60)
+            s = int(seg.start % 60)
+            timestamp_str = f"[{m:02d}:{s:02d}]"
+            transcript_context += f"{timestamp_str} {seg.text}\n"
+
+        # 2. Xây dựng System Instruction chuyên biệt
+        system_instruction = (
+            "Bạn là một trợ lý AI thông minh hỗ trợ sinh tài liệu học tập.\n"
+            "Dưới đây là phụ đề bài giảng:\n"
+            f"====================\n{transcript_context}\n====================\n\n"
+            "Hãy làm theo yêu cầu trong câu hỏi của người dùng và trả về kết quả chính xác bám sát nội dung phụ đề."
+        )
+
+        contents = [types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=payload.query)]
+        )]
+
+        try:
+            config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.2,
+            )
+            
+            response = await client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=contents,
+                config=config,
+            )
+            
+            ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
+            return ChatResponse(response=ai_reply)
+            
+        except Exception as e:
+            logger.error(f"Error in get_raw_gemini_response: {e}")
+            try:
+                response = await client.aio.models.generate_content(
+                    model="gemini-2.5-flash-lite",
+                    contents=contents,
+                    config=config,
+                )
+                ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
+                return ChatResponse(response=ai_reply)
+            except Exception as ex:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Gemini call failed: {str(ex)}"
+                )
+        finally:
+            try:
+                await client.aio.aclose()
+            except Exception:
+                pass
 
 def get_chat_service() -> ChatService:
     """Dependency injection provider cho ChatService."""

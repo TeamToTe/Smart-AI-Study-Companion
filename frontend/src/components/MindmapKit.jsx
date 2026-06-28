@@ -139,13 +139,12 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
 
         const contextSegments = segments.map(s => ({ start: s.start, end: s.end, text: s.text }));
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/chat/raw', {
           method: 'POST',
           headers,
           body: JSON.stringify({
             query: queryPrompt,
-            segments: contextSegments,
-            history: []
+            segments: contextSegments
           })
         });
 
