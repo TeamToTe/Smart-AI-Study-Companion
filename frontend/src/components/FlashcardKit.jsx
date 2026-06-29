@@ -57,13 +57,12 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
           "[{\"front\": \"câu hỏi mặt trước\", \"back\": \"câu trả lời mặt sau\"}]. " +
           "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô.";
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/chat/raw', {
           method: 'POST',
           headers,
           body: JSON.stringify({
             query: queryPrompt,
-            segments: segments.map(s => ({ start: s.start, end: s.end, text: s.text })),
-            history: []
+            segments: segments.map(s => ({ start: s.start, end: s.end, text: s.text }))
           })
         });
 

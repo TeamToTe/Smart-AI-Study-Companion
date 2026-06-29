@@ -1,56 +1,73 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, Clock, Loader2 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 import './RAGChatbot.css';
 
 export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
-  const [messages, setMessages] = useState(() => {
-    if (videoUrl) {
-      const saved = localStorage.getItem(`chat_history_${videoUrl}`);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          return parsed.map(m => ({ ...m, time: new Date(m.time) }));
-        } catch (e) {
-          console.error("Error parsing chat history:", e);
-        }
-      }
-    }
-    return [];
-  });
+  const { session } = useAuth();
+  const [messages, setMessages] = useState([]);
+  const [sessionId, setSessionId] = useState(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesContainerRef = useRef(null);
+  const isLoggedIn = !!session?.access_token;
 
-  // Load chat history when video changes or t function changes
+  // Load chat history when videoUrl or session changes
   useEffect(() => {
-    if (videoUrl) {
-      const saved = localStorage.getItem(`chat_history_${videoUrl}`);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setMessages(parsed.map(m => ({ ...m, time: new Date(m.time) })));
-          return;
-        } catch (e) {
-          console.error("Error parsing chat history:", e);
+    if (!videoUrl || !session?.access_token) {
+      setMessages([
+        {
+          sender: 'bot',
+          text: t('chatbotWelcome'),
+          time: new Date()
         }
-      }
+      ]);
+      setSessionId(null);
+      return;
     }
-    setMessages([
-      {
-        sender: 'bot',
-        text: t('chatbotWelcome'),
-        time: new Date()
-      }
-    ]);
-  }, [videoUrl]);
 
-  // Persist chat history to localStorage whenever messages change
-  useEffect(() => {
-    if (videoUrl && messages.length > 0) {
-      localStorage.setItem(`chat_history_${videoUrl}`, JSON.stringify(messages));
-    }
-  }, [messages, videoUrl]);
+    const fetchHistory = async () => {
+      setLoading(true);
+      try {
+        const url = `/api/chat/history?video_url=${encodeURIComponent(videoUrl)}`;
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSessionId(data.session_id);
+          
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages.map(m => ({
+              ...m,
+              time: m.time ? new Date(m.time) : new Date()
+            })));
+          } else {
+            setMessages([
+              {
+                sender: 'bot',
+                text: t('chatbotWelcome'),
+                time: new Date()
+              }
+            ]);
+          }
+        } else {
+          console.error("Failed to load chat history, status:", response.status);
+        }
+      } catch (err) {
+        console.error("Failed to load chat history:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, [videoUrl, session, t]);
 
   // Scroll to bottom when messages change, but only if we have active chat history (more than 1 message)
   useEffect(() => {
@@ -197,7 +214,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !isLoggedIn) return;
 
     const userText = input.trim();
     const newMsg = {
@@ -211,27 +228,17 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
     setLoading(true);
 
     try {
-      // Map frontend messages history to Backend ChatMessage structure
-      const history = messages
-        .filter(msg => msg.text !== t('chatbotWelcome'))
-        .map(msg => ({
-          role: msg.sender === 'user' ? 'user' : 'model',
-          content: msg.text
-        }));
-
-      // Call Backend API
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers = { 'Content-Type': 'application/json' };
-      if (session?.access_token) {
-        headers['Authorization'] = `Bearer ${session.access_token}`;
-      }
+      const headers = { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      };
 
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
+          session_id: sessionId,
           query: userText,
-          history: history,
           segments: segments.map(seg => ({
             start: seg.start,
             end: seg.end,
@@ -301,15 +308,26 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
         )}
       </div>
 
+      {!isLoggedIn && (
+        <div className="chat-login-prompt">
+          <span>Vui lòng đăng nhập để bắt đầu trò chuyện với AI Tutor.</span>
+        </div>
+      )}
+
       <form onSubmit={handleSend} className="chat-input-form">
         <input
           type="text"
-          placeholder={t('askSomethingAboutVideo')}
+          placeholder={isLoggedIn ? t('askSomethingAboutVideo') : 'Vui lòng đăng nhập để đặt câu hỏi...'}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           className="chat-input"
+          disabled={!isLoggedIn || loading}
         />
-        <button type="submit" className="chat-send-btn btn-primary" disabled={loading || !input.trim()}>
+        <button 
+          type="submit" 
+          className="chat-send-btn btn-primary" 
+          disabled={loading || !input.trim() || !isLoggedIn}
+        >
           <Send size={16} />
         </button>
       </form>
