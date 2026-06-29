@@ -24,7 +24,7 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [tooltipVisible, setTooltipVisible] = useState(false);
 
-  // Fetch dynamic definitions from Gemini
+  // Fetch dynamic definitions from Supabase / Gemini
   const fetchDynamicDefinition = async (term) => {
     const lowerKey = term.toLowerCase();
     try {
@@ -33,23 +33,9 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      const queryPrompt = 
-        `Hãy định nghĩa ngắn gọn thuật ngữ kỹ thuật sau đây trong ngữ cảnh bài học: "${term}". ` +
-        "Bản dịch tiếng Việt và định nghĩa phải ngắn gọn (khoảng 15-20 từ). " +
-        "Trả về DUY NHẤT một đối tượng JSON hợp lệ chứa cấu trúc chính xác như sau: " +
-        `{"term": "${term}", "translation": "bản dịch tiếng Việt", "definition": "định nghĩa ngắn gọn", "category": "lĩnh vực chuyên ngành"}. ` +
-        "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô.";
-
-      const contextSegments = segments ? segments.slice(0, 15).map(s => ({ text: s.text })) : [];
-
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          query: queryPrompt,
-          segments: contextSegments,
-          history: []
-        })
+      const response = await fetch(`/api/glossary/definition?term=${encodeURIComponent(term)}`, {
+        method: 'GET',
+        headers
       });
 
       if (!response.ok) {
@@ -57,22 +43,12 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
       }
 
       const data = await response.json();
-      const rawJsonText = data.response;
-
-      let cleanedJson = rawJsonText.trim();
-      if (cleanedJson.startsWith("```")) {
-        cleanedJson = cleanedJson.replace(/^```(json)?\s*/i, "");
-        cleanedJson = cleanedJson.replace(/\s*```$/, "");
-      }
-      cleanedJson = cleanedJson.trim();
-
-      const parsedDef = JSON.parse(cleanedJson);
-      if (parsedDef && parsedDef.term) {
+      if (data && data.term) {
         const termData = {
-          term: parsedDef.term || term,
-          translation: parsedDef.translation || term,
-          definition: parsedDef.definition || "Thuật ngữ trong bài học.",
-          category: parsedDef.category || "Chuyên ngành"
+          term: data.term || term,
+          translation: data.translation || term,
+          definition: data.definition || "Thuật ngữ trong bài học.",
+          category: data.category || "Chuyên ngành"
         };
 
         setDynamicGlossary(prev => ({

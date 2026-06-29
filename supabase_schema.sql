@@ -42,3 +42,24 @@ CREATE POLICY "Allow users to manage messages in their own sessions" ON public.c
             WHERE chat_sessions.id = chat_messages.session_id AND chat_sessions.user_id = auth.uid()
         )
     );
+
+-- 4. Tạo bảng lưu trữ định nghĩa thuật ngữ kỹ thuật (glossary_definitions)
+CREATE TABLE IF NOT EXISTS public.glossary_definitions (
+    term TEXT PRIMARY KEY,
+    translation TEXT NOT NULL,
+    definition TEXT NOT NULL,
+    category TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Cấu hình Row Level Security (RLS) cho glossary_definitions
+ALTER TABLE public.glossary_definitions ENABLE ROW LEVEL SECURITY;
+
+-- Cho phép mọi người dùng đọc (SELECT) định nghĩa thuật ngữ
+CREATE POLICY "Allow anyone to read glossary definitions" ON public.glossary_definitions
+    FOR SELECT USING (true);
+
+-- Cho phép người dùng đã xác thực thêm mới (INSERT) định nghĩa thuật ngữ
+CREATE POLICY "Allow authenticated users to insert glossary definitions" ON public.glossary_definitions
+    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+

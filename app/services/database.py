@@ -115,3 +115,48 @@ class DatabaseService:
                     logger.error(f"Failed to save message to Supabase. Status: {res.status_code}, Body: {res.text}")
             except Exception as e:
                 logger.error(f"Error saving chat message to Supabase: {e}")
+
+    async def get_glossary_term(self, user_token: Optional[str], term: str) -> Optional[Dict[str, str]]:
+        """
+        Lấy thông tin định nghĩa của thuật ngữ từ bảng glossary_definitions.
+        """
+        headers = self._get_headers(user_token)
+        lower_term = term.strip().lower()
+        url = f"{self.supabase_url}/rest/v1/glossary_definitions?term=eq.{lower_term}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=headers)
+                if response.status_code == 200:
+                    definitions = response.json()
+                    if definitions:
+                        return definitions[0]
+            except Exception as e:
+                logger.error(f"Error querying glossary_definitions: {e}")
+        return None
+
+    async def save_glossary_term(
+        self, 
+        user_token: str, 
+        term: str, 
+        translation: str, 
+        definition: str, 
+        category: Optional[str] = None
+    ):
+        """
+        Lưu định nghĩa của thuật ngữ mới vào database.
+        """
+        headers = self._get_headers(user_token)
+        url = f"{self.supabase_url}/rest/v1/glossary_definitions"
+        payload = {
+            "term": term.strip().lower(),
+            "translation": translation,
+            "definition": definition,
+            "category": category or "General"
+        }
+        async with httpx.AsyncClient() as client:
+            try:
+                res = await client.post(url, headers=headers, json=payload)
+                if res.status_code not in (200, 201):
+                    logger.error(f"Failed to save glossary term. Status: {res.status_code}, Body: {res.text}")
+            except Exception as e:
+                logger.error(f"Error saving glossary term to Supabase: {e}")
