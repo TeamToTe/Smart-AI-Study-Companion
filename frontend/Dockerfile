@@ -2,6 +2,12 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
+# Add build-time environment variables for Supabase (Vite requires these at build time)
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
 # Install dependencies first for caching
 COPY package*.json ./
 RUN npm ci
