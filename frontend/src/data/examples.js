@@ -5,8 +5,8 @@ export const EXAMPLES = [
     url: "https://www.youtube.com/watch?v=RBSGKlAboiM"
   },
   {
-    title: "FastAPI Complete Tutorial for Beginners",
-    url: "https://www.youtube.com/watch?v=tLKKmCO9_p4"
+    title: "Principles of Microeconomics - MIT 14.01SC",
+    url: "https://www.youtube.com/watch?v=xy9__5MCEe0"
   },
   {
     title: "Neural Networks from Scratch (3Blue1Brown)",

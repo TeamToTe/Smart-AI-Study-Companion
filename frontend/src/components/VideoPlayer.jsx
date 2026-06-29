@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize2, Minimize2 } from 'lucide-react';
+import { GLOSSARY } from '../data/glossary';
+import GlossaryTooltip from './GlossaryTooltip';
+import { useAuth } from '../context/AuthContext';
 import './VideoPlayer.css';
 
 // Utility to extract YouTube ID
@@ -10,7 +13,166 @@ function getYouTubeId(url) {
   return (match && match[2].length === 11) ? match[2] : null;
 }
 
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang }) {
+  const { session } = useAuth();
+  const [dynamicGlossary, setDynamicGlossary] = useState({});
+  const [hoveredTerm, setHoveredTerm] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+
+  // Fetch dynamic definitions from Gemini
+  const fetchDynamicDefinition = async (term) => {
+    const lowerKey = term.toLowerCase();
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const queryPrompt = 
+        `Hãy định nghĩa ngắn gọn thuật ngữ kỹ thuật sau đây trong ngữ cảnh bài học: "${term}". ` +
+        "Bản dịch tiếng Việt và định nghĩa phải ngắn gọn (khoảng 15-20 từ). " +
+        "Trả về DUY NHẤT một đối tượng JSON hợp lệ chứa cấu trúc chính xác như sau: " +
+        `{"term": "${term}", "translation": "bản dịch tiếng Việt", "definition": "định nghĩa ngắn gọn", "category": "lĩnh vực chuyên ngành"}. ` +
+        "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô.";
+
+      const contextSegments = segments ? segments.slice(0, 15).map(s => ({ text: s.text })) : [];
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query: queryPrompt,
+          segments: contextSegments,
+          history: []
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
+      }
+
+      const data = await response.json();
+      const rawJsonText = data.response;
+
+      let cleanedJson = rawJsonText.trim();
+      if (cleanedJson.startsWith("```")) {
+        cleanedJson = cleanedJson.replace(/^```(json)?\s*/i, "");
+        cleanedJson = cleanedJson.replace(/\s*```$/, "");
+      }
+      cleanedJson = cleanedJson.trim();
+
+      const parsedDef = JSON.parse(cleanedJson);
+      if (parsedDef && parsedDef.term) {
+        const termData = {
+          term: parsedDef.term || term,
+          translation: parsedDef.translation || term,
+          definition: parsedDef.definition || "Thuật ngữ trong bài học.",
+          category: parsedDef.category || "Chuyên ngành"
+        };
+
+        setDynamicGlossary(prev => ({
+          ...prev,
+          [lowerKey]: termData
+        }));
+
+        setHoveredTerm(prev => {
+          if (prev && prev.term.toLowerCase() === lowerKey) {
+            return termData;
+          }
+          return prev;
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to fetch dynamic definition:", err);
+      const fallbackDef = {
+        term: term,
+        translation: term,
+        definition: "Thuật ngữ chuyên ngành trong bài giảng.",
+        category: "General"
+      };
+      setDynamicGlossary(prev => ({
+        ...prev,
+        [lowerKey]: fallbackDef
+      }));
+      setHoveredTerm(prev => {
+        if (prev && prev.term.toLowerCase() === lowerKey) {
+          return fallbackDef;
+        }
+        return prev;
+      });
+    }
+  };
+
+  const handleMouseEnter = (e, termKey) => {
+    const rect = e.target.getBoundingClientRect();
+    const tooltipWidth = 280;
+    const tooltipHeight = 150;
+    
+    let x = rect.left + rect.width / 2 - tooltipWidth / 2;
+    let y = rect.top - tooltipHeight - 12;
+
+    x = Math.max(10, Math.min(x, window.innerWidth - tooltipWidth - 10));
+    y = Math.max(10, y);
+
+    const lowerKey = termKey.toLowerCase();
+
+    if (GLOSSARY[lowerKey]) {
+      setHoveredTerm(GLOSSARY[lowerKey]);
+      setTooltipPos({ x, y });
+      setTooltipVisible(true);
+    } else if (dynamicGlossary[lowerKey]) {
+      setHoveredTerm(dynamicGlossary[lowerKey]);
+      setTooltipPos({ x, y });
+      setTooltipVisible(true);
+    } else {
+      setHoveredTerm({ term: termKey, loading: true });
+      setTooltipPos({ x, y });
+      setTooltipVisible(true);
+      fetchDynamicDefinition(termKey);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setTooltipVisible(false);
+  };
+
+  const renderHighlightedText = (text, domainWords = []) => {
+    if (!text) return "";
+    const glossaryTerms = Object.keys(GLOSSARY);
+    const combinedTerms = [...new Set([...glossaryTerms, ...(domainWords || [])])];
+    const sortedTerms = combinedTerms.filter(Boolean).sort((a, b) => b.length - a.length);
+    if (sortedTerms.length === 0) return text;
+
+    const regex = new RegExp(`\\b(${sortedTerms.map(escapeRegExp).join('|')})\\b`, 'gi');
+    const parts = text.split(regex);
+
+    return parts.map((part, index) => {
+      const lowerPart = part.toLowerCase();
+      const isGlossary = !!GLOSSARY[lowerPart];
+      const isDynamic = !!dynamicGlossary[lowerPart];
+      const isDomainWord = (domainWords || []).some(dw => dw.toLowerCase() === lowerPart);
+
+      if (isGlossary || isDynamic || isDomainWord) {
+        return (
+          <span 
+            key={index} 
+            className="glossary-highlight"
+            onMouseEnter={(e) => handleMouseEnter(e, lowerPart)}
+            onMouseLeave={handleMouseLeave}
+            style={{ cursor: 'help' }}
+          >
+            {part}
+          </span>
+        );
+      }
+      return <React.Fragment key={index}>{part}</React.Fragment>;
+    });
+  };
   const videoId = getYouTubeId(url);
   const containerId = 'youtube-player-iframe';
   const playerRef = useRef(null);
@@ -281,14 +443,22 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
-          <p className="caption-en">{activeSegment.original_text || activeSegment.text}</p>
+          <p className="caption-en">
+            {renderHighlightedText(activeSegment.original_text || activeSegment.text, activeSegment.domain_words)}
+          </p>
           {lang === 'vi' && (
             <p className="caption-vi">
-              {activeSegment.original_text ? activeSegment.text : getMockTranslationForOverlay(activeSegment.text)}
+              {renderHighlightedText(activeSegment.original_text ? activeSegment.text : getMockTranslationForOverlay(activeSegment.text), activeSegment.domain_words)}
             </p>
           )}
         </div>
       )}
+
+      <GlossaryTooltip 
+        termData={hoveredTerm} 
+        position={tooltipPos} 
+        visible={tooltipVisible} 
+      />
     </div>
   );
 }

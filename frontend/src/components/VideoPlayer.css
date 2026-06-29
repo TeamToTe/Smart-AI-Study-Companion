@@ -160,3 +160,24 @@
   color: var(--color-danger);
   font-weight: 600;
 }
+
+/* Glossary Highlights in Overlay */
+.video-player-wrapper .glossary-highlight {
+  border-bottom: 2px dashed var(--color-accent);
+  cursor: help;
+  font-weight: 600;
+  color: inherit;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  padding: 0 2px;
+}
+
+.video-player-wrapper .glossary-highlight:hover {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border-bottom-style: solid;
+}
+
+.theme-light .video-player-wrapper .glossary-highlight:hover {
+  background-color: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+}
