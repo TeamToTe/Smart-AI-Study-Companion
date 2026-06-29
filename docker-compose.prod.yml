@@ -56,8 +56,8 @@ services:
         - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
         - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
     container_name: transcription_frontend_prod
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     depends_on:
       - web
     restart: always
