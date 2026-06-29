@@ -154,49 +154,47 @@ class GeminiTranscriptionService:
             max_tries = 3
             response = None
             last_exception = None
+            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"]
             
             for attempt in range(max_tries):
-                try:
-                    logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying primary model gemini-2.5-flash...")
-                    response = await _generate_content_single_call(
-                        aclient=client.aio,
-                        model="gemini-2.5-flash",
-                        contents=contents,
-                        config=config
-                    )
-                    break  # Success on primary!
-                except Exception as primary_error:
-                    logger.warning(
-                        f"Pipeline attempt {attempt + 1}: Primary model gemini-2.5-flash failed: {primary_error}. "
-                        "Falling back immediately to gemini-2.5-flash-lite..."
-                    )
+                success = False
+                for idx, model_name in enumerate(models):
                     try:
-                        logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying fallback model gemini-2.5-flash-lite...")
+                        if idx > 0:
+                            logger.warning(
+                                f"Pipeline attempt {attempt + 1}: Model {models[idx-1]} failed. "
+                                f"Falling back immediately to {model_name}..."
+                            )
+                        logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying model {model_name}...")
                         response = await _generate_content_single_call(
                             aclient=client.aio,
-                            model="gemini-2.5-flash-lite",
+                            model=model_name,
                             contents=contents,
                             config=config
                         )
-                        break  # Success on fallback!
-                    except Exception as fallback_error:
-                        last_exception = fallback_error
+                        success = True
+                        break  # Success on this model!
+                    except Exception as err:
+                        last_exception = err
                         logger.warning(
-                            f"Pipeline attempt {attempt + 1}: Fallback model gemini-2.5-flash-lite also failed: {fallback_error}"
+                            f"Pipeline attempt {attempt + 1}: Model {model_name} failed: {err}"
                         )
-                        
+                
+                if success:
+                    break
+
                 if attempt < max_tries - 1:
                     delay = delays[attempt]
                     logger.info(f"Waiting {delay} seconds before retrying the transcription pipeline...")
                     await asyncio.sleep(delay)
             
             if response is None:
-                logger.error(f"Fallback model gemini-2.5-flash-lite also failed after all pipeline attempts: {last_exception}")
+                logger.error(f"All transcription models failed after all pipeline attempts. Last error: {last_exception}")
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
                     detail=(
-                        f"Gemini transcription failed for both gemini-2.5-flash and fallback gemini-2.5-flash-lite. "
-                        f"Errors: Last fallback error: {str(last_exception)}"
+                        f"Gemini transcription failed for all models: {', '.join(models)}. "
+                        f"Last error: {str(last_exception)}"
                     )
                 )
 

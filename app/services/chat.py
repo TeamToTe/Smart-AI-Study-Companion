@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class ChatService:
     async def get_chat_response(
         self, 
-        payload: ChatRequest, 
+        payload: ChatRequest, # user request
         user_token: str, 
         db_service: DatabaseService
     ) -> ChatResponse:
@@ -70,18 +70,36 @@ class ChatService:
         ))
 
         # 5. Thực hiện cuộc gọi API bất đồng bộ tới Gemini
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.3,
+        )
+        
+        models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"]
+        response = None
+        last_exception = None
+
+        for idx, model_name in enumerate(models):
+            try:
+                if idx > 0:
+                    logger.warning(f"Fallback to {model_name}...")
+                logger.info(f"Sending chatbot request to Gemini using {model_name}...")
+                response = await client.aio.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config,
+                )
+                break
+            except Exception as e:
+                last_exception = e
+                logger.error(f"Error calling Gemini in ChatService with {model_name}: {e}")
+
         try:
-            config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.3,
-            )
-            
-            logger.info("Sending chatbot request to Gemini...")
-            response = await client.aio.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=contents,
-                config=config,
-            )
+            if response is None:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"All Gemini models failed. Last error: {str(last_exception)}"
+                )
             
             ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
             
@@ -89,29 +107,6 @@ class ChatService:
             await db_service.save_chat_message(user_token, payload.session_id, payload.query, ai_reply)
             
             return ChatResponse(response=ai_reply)
-            
-        except Exception as e:
-            logger.error(f"Error calling Gemini in ChatService: {e}")
-            logger.warning(f"Fallback to gemini-2.5-flash-lite...")
-            try:
-                logger.info("Sending chatbot request to Gemini...")
-                response = await client.aio.models.generate_content(
-                    model="gemini-2.5-flash-lite",
-                    contents=contents,
-                    config=config,
-                )    
-                ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
-                
-                # Lưu vào database kể cả khi dùng model fallback
-                await db_service.save_chat_message(user_token, payload.session_id, payload.query, ai_reply)
-                
-                return ChatResponse(response=ai_reply)
-            
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Fallback also failed: {str(e)}"
-                )
         finally:
             try:
                 await client.aio.aclose()
@@ -153,36 +148,39 @@ class ChatService:
             parts=[types.Part.from_text(text=payload.query)]
         )]
 
-        try:
-            config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.2,
-            )
-            
-            response = await client.aio.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=contents,
-                config=config,
-            )
-            
-            ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
-            return ChatResponse(response=ai_reply)
-            
-        except Exception as e:
-            logger.error(f"Error in get_raw_gemini_response: {e}")
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=0.2,
+        )
+        
+        models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"]
+        response = None
+        last_exception = None
+
+        for idx, model_name in enumerate(models):
             try:
+                if idx > 0:
+                    logger.warning(f"Fallback to {model_name}...")
+                logger.info(f"Sending raw chatbot request to Gemini using {model_name}...")
                 response = await client.aio.models.generate_content(
-                    model="gemini-2.5-flash-lite",
+                    model=model_name,
                     contents=contents,
                     config=config,
                 )
-                ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
-                return ChatResponse(response=ai_reply)
-            except Exception as ex:
+                break
+            except Exception as e:
+                last_exception = e
+                logger.error(f"Error calling Gemini in get_raw_gemini_response with {model_name}: {e}")
+
+        try:
+            if response is None:
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"Gemini call failed: {str(ex)}"
+                    detail=f"All Gemini models failed. Last error: {str(last_exception)}"
                 )
+            
+            ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
+            return ChatResponse(response=ai_reply)
         finally:
             try:
                 await client.aio.aclose()
