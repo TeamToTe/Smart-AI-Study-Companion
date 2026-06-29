@@ -11,5 +11,6 @@
 tests/
 node_modules/
 app/storage/
+app/cache/
 chat_response.md
 scratch/

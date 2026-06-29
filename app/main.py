@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.api.transcribe import router as transcribe_router
 from app.api.chat import router as chat_router
 from app.api.glossary import router as glossary_router
@@ -18,6 +19,15 @@ app = FastAPI(
     title="YouTube Transcription API",
     description="A production-ready API that extracts and parses transcripts/subtitles from YouTube URLs.",
     version="1.0.0",
+)
+
+# Configure CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Include the routers with prefix
