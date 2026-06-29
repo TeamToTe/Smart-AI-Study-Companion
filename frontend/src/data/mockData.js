@@ -22,21 +22,19 @@ export function getMockSegmentsForUrl(url) {
     ];
   }
 
-  // 2. FastAPI Tutorial
-  if (lowercaseUrl.includes("tlkkmco9_p4") || lowercaseUrl.includes("fastapi")) {
+  // 2. MIT Microeconomics
+  if (lowercaseUrl.includes("xy9__5mcee0") || lowercaseUrl.includes("economics") || lowercaseUrl.includes("microeconomics")) {
     return [
-      { start: 0, end: 14, text: "Welcome to this complete tutorial. We will build a production-ready API using the FastAPI framework." },
-      { start: 15, end: 32, text: "FastAPI is a modern web framework designed for building REST APIs with Python 3.8+." },
-      { start: 33, end: 48, text: "It is extremely fast, powered by Starlette for web routes and Uvicorn for ASGI execution." },
-      { start: 49, end: 68, text: "One of its key features is declarative validation, which is handled automatically by Pydantic." },
-      { start: 69, end: 85, text: "By using standard Python type hints, Pydantic parses and validates client inputs." },
-      { start: 86, end: 104, text: "Let us define a schema for a new user request using Pydantic models." },
-      { start: 105, end: 125, text: "If a request fails validation, FastAPI returns a 422 error detailing the invalid parameters." },
-      { start: 126, end: 145, text: "FastAPI also supports native asynchronous programming out of the box using async/await." },
-      { start: 146, end: 165, text: "We can define our endpoints as async def to handle I/O bound queries concurrently." },
-      { start: 166, end: 185, text: "To create resources, we map endpoints to POST routers. Let us write @app.post() for users." },
-      { start: 186, end: 205, text: "FastAPI also has a powerful dependency injection system declared via Depends()." },
-      { start: 206, end: 228, text: "We can inject services, database sessions, or security protocols cleanly into our endpoint signatures." }
+      { start: 0, end: 12, text: "Welcome to MIT 14.01 Principles of Microeconomics. Today we will discuss the basic principles of supply and demand." },
+      { start: 13, end: 28, text: "Economics is the study of how society manages its scarce resources to satisfy unlimited wants." },
+      { start: 29, end: 44, text: "Microeconomics focuses on individual decision-makers, specifically households and business firms." },
+      { start: 45, end: 60, text: "A key concept is opportunity cost, which is the value of the next best alternative given up." },
+      { start: 61, end: 75, text: "Let us examine the market mechanism, where buyers and sellers interact to determine equilibrium price." },
+      { start: 76, end: 92, text: "When price increases, consumer demand typically decreases. This is known as the Law of Demand." },
+      { start: 93, end: 110, text: "Conversely, producers are willing to supply more goods at higher prices, representing the Law of Supply." },
+      { start: 111, end: 130, text: "Equilibrium is reached where the quantity supplied equals the quantity demanded, clearing the market." },
+      { start: 131, end: 152, text: "If the government imposes a price ceiling, it can cause a shortage or deadweight loss in welfare." },
+      { start: 153, end: 172, text: "Understanding these market models helps economists analyze policy changes and consumer behavior." }
     ];
   }
 

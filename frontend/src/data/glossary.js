@@ -120,5 +120,29 @@ export const GLOSSARY = {
     translation: "Thuật toán / Giải thuật",
     definition: "Một tập hợp hữu hạn các chỉ dẫn rõ ràng để giải quyết một bài toán cụ thể hay thực hiện một phép tính.",
     category: "Computer Science"
+  },
+  "opportunity cost": {
+    term: "Opportunity Cost",
+    translation: "Chi phí cơ hội",
+    definition: "Giá trị của sự lựa chọn tốt nhất khác bị bỏ qua khi đưa ra một quyết định kinh tế.",
+    category: "Economics"
+  },
+  "supply and demand": {
+    term: "Supply and Demand",
+    translation: "Cung và cầu",
+    definition: "Mối quan hệ giữa lượng hàng hóa mà người sản xuất muốn bán và lượng hàng hóa mà người tiêu dùng muốn mua tại các mức giá khác nhau.",
+    category: "Economics"
+  },
+  "microeconomics": {
+    term: "Microeconomics",
+    translation: "Kinh tế vi mô",
+    definition: "Một nhánh của kinh tế học nghiên cứu hành vi của các cá nhân và doanh nghiệp trong việc đưa ra các quyết định phân bổ nguồn lực khan hiếm.",
+    category: "Economics"
+  },
+  "equilibrium price": {
+    term: "Equilibrium Price",
+    translation: "Giá cân bằng",
+    definition: "Mức giá tại đó sản lượng cung cấp bằng với sản lượng nhu cầu, làm sạch thị trường mà không thừa hay thiếu hụt hàng hóa.",
+    category: "Economics"
   }
 };
