@@ -11,21 +11,33 @@
 
 .caption-overlay {
   position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
   width: max-content;
   max-width: 85%;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.4);
   border: none;
-  padding: 0;
+  padding: 6px 14px;
+  border-radius: 8px;
   text-align: center;
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 10;
   display: flex;
   flex-direction: column;
   gap: 2px;
   animation: fadeInOverlay 0.15s ease-out;
+  cursor: grab;
+  user-select: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.caption-overlay:hover {
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.caption-overlay.dragging {
+  cursor: grabbing;
+  background: rgba(0, 0, 0, 0.75);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.55);
 }
 
 .caption-en {
@@ -59,11 +71,9 @@
 @keyframes fadeInOverlay {
   from {
     opacity: 0;
-    transform: translate(-50%, 4px);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, 0);
   }
 }
 
@@ -111,7 +121,7 @@
 }
 
 .video-player-wrapper.fullscreen .caption-overlay {
-  bottom: 54px; /* Lower positioning in fullscreen */
+  /* Position is managed dynamically in percentage coordinates */
 }
 
 .video-player-wrapper.fullscreen .caption-en {

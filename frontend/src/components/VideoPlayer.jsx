@@ -18,6 +18,80 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
   const wrapperRef = useRef(null);
   const [apiReady, setApiReady] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [position, setPosition] = useState({ x: 50, y: 85 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, startPos: { x: 50, y: 85 } });
+
+  const startDrag = (clientX, clientY) => {
+    setIsDragging(true);
+    dragRef.current = {
+      startX: clientX,
+      startY: clientY,
+      startPos: { ...position }
+    };
+  };
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return; // Only left-click
+    startDrag(e.clientX, e.clientY);
+    e.preventDefault(); // Prevent text selection
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e) => {
+      updateDrag(e.clientX, e.clientY);
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 1) {
+        updateDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const updateDrag = (clientX, clientY) => {
+      if (!wrapperRef.current) return;
+      const rect = wrapperRef.current.getBoundingClientRect();
+      
+      const deltaX = clientX - dragRef.current.startX;
+      const deltaY = clientY - dragRef.current.startY;
+      
+      const deltaXPercent = (deltaX / rect.width) * 100;
+      const deltaYPercent = (deltaY / rect.height) * 100;
+      
+      let newX = dragRef.current.startPos.x + deltaXPercent;
+      let newY = dragRef.current.startPos.y + deltaYPercent;
+      
+      // Restrict subtitles to remain within a safe zone (5% to 95%)
+      newX = Math.max(5, Math.min(95, newX));
+      newY = Math.max(5, Math.min(95, newY));
+      
+      setPosition({ x: newX, y: newY });
+    };
+
+    const stopDrag = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', stopDrag);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', stopDrag);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', stopDrag);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', stopDrag);
+    };
+  }, [isDragging]);
 
   // Identify active segment for overlay subtitles
   const activeSegment = (showOverlay && segments && segments.length > 0)
@@ -197,7 +271,16 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
       </button>
       
       {activeSegment && (
-        <div className="caption-overlay">
+        <div 
+          className={`caption-overlay ${isDragging ? 'dragging' : ''}`}
+          style={{
+            left: `${position.x}%`,
+            top: `${position.y}%`,
+            transform: 'translate(-50%, -50%)'
+          }}
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+        >
           <p className="caption-en">{activeSegment.original_text || activeSegment.text}</p>
           {lang === 'vi' && (
             <p className="caption-vi">
