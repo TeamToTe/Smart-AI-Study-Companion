@@ -67,7 +67,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
     };
 
     fetchHistory();
-  }, [videoUrl, session, t]);
+  }, [videoUrl, session?.access_token]);
 
   // Scroll to bottom when messages change, but only if we have active chat history (more than 1 message)
   useEffect(() => {
