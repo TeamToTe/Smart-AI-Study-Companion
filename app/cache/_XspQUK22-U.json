@@ -1,0 +1,383 @@
+{
+  "lang": "vi",
+  "segments": [
+    {
+      "start": 0.48,
+      "end": 3.98,
+      "text": "Tôi đang một mình, tan vỡ và cô đơn.",
+      "domain_words": [],
+      "original_text": "I'm on my own, broken and alone."
+    },
+    {
+      "start": 4.28,
+      "end": 6.58,
+      "text": "Tôi cảm nhận cơn mưa đổ ập xuống.",
+      "domain_words": [],
+      "original_text": "I feel the rain crashing down."
+    },
+    {
+      "start": 7.78,
+      "end": 10.58,
+      "text": "Xung quanh là thành phố trống vắng.",
+      "domain_words": [],
+      "original_text": "All around this empty town."
+    },
+    {
+      "start": 11.08,
+      "end": 13.38,
+      "text": "Tôi đang tìm kiếm những thứ bị mất và tìm thấy.",
+      "domain_words": [],
+      "original_text": "I'm searching for the lost and found."
+    },
+    {
+      "start": 14.38,
+      "end": 17.08,
+      "text": "Nhưng bạn không quan tâm, bạn không nhận ra.",
+      "domain_words": [],
+      "original_text": "But you don't care, you're unaware."
+    },
+    {
+      "start": 17.88,
+      "end": 20.78,
+      "text": "Tiếp tục di chuyển như thể những vết sẹo không tồn tại.",
+      "domain_words": [],
+      "original_text": "Keep moving like the scars aren't even there."
+    },
+    {
+      "start": 21.28,
+      "end": 24.08,
+      "text": "Nó đang lan tỏa như ngọn lửa cháy rực.",
+      "domain_words": [],
+      "original_text": "It's in the air like a blazing flare."
+    },
+    {
+      "start": 24.68,
+      "end": 27.78,
+      "text": "Các rủi ro là ngọn lửa sẽ thiêu cháy chúng ta.",
+      "domain_words": [],
+      "original_text": "The stakes are the flames will burn us."
+    },
+    {
+      "start": 27.78,
+      "end": 30.78,
+      "text": "Tôi từng nghĩ bạn là người dành cho tôi.",
+      "domain_words": [],
+      "original_text": "I thought you were the one for me."
+    },
+    {
+      "start": 31.08,
+      "end": 33.98,
+      "text": "Vì vậy tôi đã dành cho bạn tất cả mọi thứ.",
+      "domain_words": [],
+      "original_text": "That's why I give you everything."
+    },
+    {
+      "start": 34.48,
+      "end": 37.58,
+      "text": "Ôm bạn thật chặt giữa biển cả cuồng nộ.",
+      "domain_words": [],
+      "original_text": "Held you close by the stormy seas."
+    },
+    {
+      "start": 37.88,
+      "end": 40.48,
+      "text": "Ôi, bạn là cả thế giới đối với tôi.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 41.08,
+      "end": 44.08,
+      "text": "Tôi từng hôn đầu bạn khi bạn khóc vì tôi.",
+      "domain_words": [],
+      "original_text": "I used to kiss your head when you cried for me."
+    },
+    {
+      "start": 44.68,
+      "end": 47.98,
+      "text": "Nắm tay bạn khi nỗi đau bao quanh.",
+      "domain_words": [],
+      "original_text": "Hold your hand while the pain was all around."
+    },
+    {
+      "start": 48.38,
+      "end": 51.08,
+      "text": "Giữ bạn ấm áp bên biển cả trút mưa.",
+      "domain_words": [],
+      "original_text": "Keep you warm by the pouring sea."
+    },
+    {
+      "start": 51.48,
+      "end": 54.48,
+      "text": "Ôi, bạn là cả thế giới đối với tôi.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 105.28,
+      "end": 108.08,
+      "text": "Ôi, bạn là cả thế giới đối với tôi.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 118.68,
+      "end": 121.48,
+      "text": "Ôi, bạn là cả thế giới đối với tôi.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 123.08,
+      "end": 125.98,
+      "text": "Người yêu dấu, bạn chưa từng ở đây.",
+      "domain_words": [],
+      "original_text": "My darling dear, you're never here."
+    },
+    {
+      "start": 126.38,
+      "end": 129.28,
+      "text": "Khi tôi đau đớn, bạn trốn tránh và biến mất.",
+      "domain_words": [],
+      "original_text": "When I'm in pain you hide and disappear."
+    },
+    {
+      "start": 130.08,
+      "end": 135.48,
+      "text": "Giống như những bóng đổ trong khí quyển, vẽ nên tầng bình lưu.",
+      "domain_words": [],
+      "original_text": "Like shadows in the atmosphere charting the stratosphere."
+    },
+    {
+      "start": 136.48,
+      "end": 139.88,
+      "text": "Tôi đã cầu nguyện cho bạn và giữ bạn gần gũi.",
+      "domain_words": [],
+      "original_text": "I prayed for you and kept you near."
+    },
+    {
+      "start": 140.28,
+      "end": 143.08,
+      "text": "Và hy vọng bạn sẽ xua tan nỗi sợ hãi của tôi.",
+      "domain_words": [],
+      "original_text": "And hoped you'd chase away my fears."
+    },
+    {
+      "start": 143.58,
+      "end": 146.48,
+      "text": "Tôi đang tự mình, bạn đã khiến tôi như vậy.",
+      "domain_words": [],
+      "original_text": "I'm on my own, you made it so."
+    },
+    {
+      "start": 147.08,
+      "end": 149.48,
+      "text": "Và giờ tôi đang truy đuổi những cơn ác mộng qua tuyết.",
+      "domain_words": [],
+      "original_text": "And now I'm chasing nightmares through the snow."
+    },
+    {
+      "start": 149.48,
+      "end": 152.78,
+      "text": "Tôi từng khóc cùng bạn qua những nỗi sợ lớn lao.",
+      "domain_words": [],
+      "original_text": "I used to cry with you through the great big fears."
+    },
+    {
+      "start": 153.08,
+      "end": 156.08,
+      "text": "Cười cùng bạn khi bạn cười nhạo tôi.",
+      "domain_words": [],
+      "original_text": "Laugh with you when you'd laugh at me."
+    },
+    {
+      "start": 156.58,
+      "end": 159.58,
+      "text": "Hy vọng cho chúng ta vì tôi tin tưởng.",
+      "domain_words": [],
+      "original_text": "Hope for us because I believe."
+    },
+    {
+      "start": 159.98,
+      "end": 162.78,
+      "text": "Toàn bộ chỉ là bạn và tôi.",
+      "domain_words": [],
+      "original_text": "The whole was just you and me."
+    },
+    {
+      "start": 203.48,
+      "end": 206.48,
+      "text": "Tôi từng nghĩ bạn là người dành cho tôi.",
+      "domain_words": [],
+      "original_text": "I thought you were the one for me."
+    },
+    {
+      "start": 206.78,
+      "end": 209.78,
+      "text": "Vì vậy tôi đã cho bạn tất cả mọi thứ.",
+      "domain_words": [],
+      "original_text": "That's why I give you everything."
+    },
+    {
+      "start": 210.28,
+      "end": 213.38,
+      "text": "Giữ bạn gần gũi giữa biển cả bão tố.",
+      "domain_words": [],
+      "original_text": "Held you close by the stormy seas."
+    },
+    {
+      "start": 213.68,
+      "end": 216.38,
+      "text": "Ôi, bạn là cả thế giới đối với tôi.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 227.38,
+      "end": 230.08,
+      "text": "Ôi, bạn là cả thế giới đối với tôi.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 241.08,
+      "end": 243.88,
+      "text": "Ôi, bạn là cả thế giới đối với tôi.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 245.58,
+      "end": 248.48,
+      "text": "Ôi, tôi sẽ làm điều này một cách tự mình.",
+      "domain_words": [],
+      "original_text": "Oh, I'm gonna do this on my own."
+    },
+    {
+      "start": 252.08,
+      "end": 255.08,
+      "text": "Không cần đổ lỗi cho bạn, bạn không biết điều đó.",
+      "domain_words": [],
+      "original_text": "No point in blaming you, you did not know."
+    },
+    {
+      "start": 256.48,
+      "end": 257.48,
+      "text": "Ôi.",
+      "domain_words": [],
+      "original_text": "Oh."
+    },
+    {
+      "start": 258.58,
+      "end": 301.08,
+      "text": "Tôi từng nghĩ bạn là người dành cho tôi. Vì vậy tôi đã cho bạn tất cả mọi thứ.",
+      "domain_words": [],
+      "original_text": "I thought you were the one for me. That's why I give you everything."
+    },
+    {
+      "start": 301.08,
+      "end": 304.58,
+      "text": "Vì vậy tôi đã cho bạn tất cả mọi thứ.",
+      "domain_words": [],
+      "original_text": "That's why I give you everything."
+    },
+    {
+      "start": 305.08,
+      "end": 308.18,
+      "text": "Giữ em gần bên giữa biển động phong ba.",
+      "domain_words": [],
+      "original_text": "Held you close by the stormy seas."
+    },
+    {
+      "start": 308.48,
+      "end": 311.18,
+      "text": "Ôi, em là cả thế giới đối với anh.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 322.08,
+      "end": 324.78,
+      "text": "Ôi, em là cả thế giới đối với anh.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 335.68,
+      "end": 338.48,
+      "text": "Ôi, em là cả thế giới đối với anh.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    },
+    {
+      "start": 340.38,
+      "end": 343.28,
+      "text": "Ôi, anh sẽ tự làm điều này.",
+      "domain_words": [],
+      "original_text": "Oh, I'm gonna do this on my own."
+    },
+    {
+      "start": 347.08,
+      "end": 349.98,
+      "text": "Không cần đổ lỗi cho anh, anh không biết.",
+      "domain_words": [],
+      "original_text": "No point in blaming you, you did not know."
+    },
+    {
+      "start": 351.38,
+      "end": 352.28,
+      "text": "Ôi.",
+      "domain_words": [],
+      "original_text": "Oh."
+    },
+    {
+      "start": 353.98,
+      "end": 356.78,
+      "text": "Ôi, anh sẽ tự làm điều này.",
+      "domain_words": [],
+      "original_text": "Oh, I'm gonna do this on my own."
+    },
+    {
+      "start": 360.48,
+      "end": 363.48,
+      "text": "Không cần đổ lỗi cho anh, anh không biết.",
+      "domain_words": [],
+      "original_text": "No point in blaming you, you did not know."
+    },
+    {
+      "start": 364.88,
+      "end": 365.78,
+      "text": "Ôi.",
+      "domain_words": [],
+      "original_text": "Oh."
+    },
+    {
+      "start": 366.98,
+      "end": 369.98,
+      "text": "Anh tưởng em là người dành cho anh.",
+      "domain_words": [],
+      "original_text": "I thought you were the one for me."
+    },
+    {
+      "start": 370.28,
+      "end": 373.28,
+      "text": "Vì vậy anh đã cho em tất cả.",
+      "domain_words": [],
+      "original_text": "That's why I give you everything."
+    },
+    {
+      "start": 373.78,
+      "end": 376.88,
+      "text": "Giữ em gần bên giữa biển động phong ba.",
+      "domain_words": [],
+      "original_text": "Held you close by the stormy seas."
+    },
+    {
+      "start": 377.18,
+      "end": 379.88,
+      "text": "Ôi, em là cả thế giới đối với anh.",
+      "domain_words": [],
+      "original_text": "Oh, you meant the world to me."
+    }
+  ]
+}
