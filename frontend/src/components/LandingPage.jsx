@@ -194,6 +194,26 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
         </div>
       )}
 
+      {/* Feedback Survey Banner for Hackathon */}
+      <div className="survey-banner glass">
+        <div className="survey-content">
+          <Sparkles size={20} className="survey-icon" style={{ color: 'var(--color-warning, #f59e0b)' }} />
+          <div className="survey-text">
+            <h3>{t('surveyTitle')}</h3>
+            <p>{t('surveyDesc')}</p>
+          </div>
+        </div>
+        <a 
+          href="https://docs.google.com/forms/d/e/1FAIpQLSccMyV6meG-NjsJYqjAls43GR9x6JmrZAAvHN-l8bc0Z0J1cA/viewform?usp=dialog" 
+          target="_blank" 
+          rel="noreferrer"
+          className="btn-primary survey-btn"
+          style={{ textDecoration: 'none' }}
+        >
+          {t('surveyAction')}
+        </a>
+      </div>
+
       <div className="features-grid">
         <div className="feature-card">
           <div className="feature-icon-wrapper blue">

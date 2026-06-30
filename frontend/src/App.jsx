@@ -630,7 +630,13 @@ export default function App() {
 
       {/* App Footer */}
       <footer>
-        <p>{t('footerText')} &copy; 2026 | <a href="https://github.com/TeamToTe/Smart-AI-Study-Companion" target="_blank" rel="noreferrer">GitHub Repository</a></p>
+        <p>
+          {t('footerText')} &copy; 2026 |{' '}
+          <a href="https://github.com/TeamToTe/Smart-AI-Study-Companion" target="_blank" rel="noreferrer">GitHub Repository</a> |{' '}
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSccMyV6meG-NjsJYqjAls43GR9x6JmrZAAvHN-l8bc0Z0J1cA/viewform?usp=dialog" target="_blank" rel="noreferrer" className="text-gradient" style={{ fontWeight: 'bold' }}>
+            {t('feedbackSurvey')}
+          </a>
+        </p>
       </footer>
 
       {/* Custom Confirmation / Alert Modal */}
