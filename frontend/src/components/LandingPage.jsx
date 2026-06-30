@@ -89,6 +89,10 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
         </div>
       </form>
 
+      <div className="input-hint">
+        * {t('videoDurationHint')}
+      </div>
+
       {error && (
         <div className="url-error-msg animate-fade-in">
           {error}
