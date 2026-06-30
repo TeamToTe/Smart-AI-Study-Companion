@@ -29,10 +29,10 @@ async def validate_video_upload_limit(
             
         existing_urls = {s["video_url"].strip().lower() for s in sessions}
         if video_url.strip().lower() not in existing_urls:
-            if len(existing_urls) >= 100:
+            if len(existing_urls) >= 2:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Bạn đã đạt giới hạn 100 video. Trợ lý học tập chỉ hỗ trợ xử lý tối đa 100 video cho mỗi người dùng trên production."
+                    detail="Bạn đã đạt giới hạn 2 video. Trợ lý học tập chỉ hỗ trợ xử lý tối đa 2 video cho mỗi người dùng trên production."
                 )
     except HTTPException:
         raise
