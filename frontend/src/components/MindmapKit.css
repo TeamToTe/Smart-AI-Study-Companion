@@ -5,9 +5,12 @@
   flex-direction: column;
   gap: var(--spacing-lg); /* 24px */
   width: 100%;
+  max-width: 100% !important;
+  min-width: 0 !important;
   padding: var(--spacing-xs); /* 8px */
   overflow-y: auto;
   max-height: 100%;
+  box-sizing: border-box;
   
   --line-color: rgba(59, 130, 246, 0.25);
   --line-active-color: var(--color-accent);
@@ -20,6 +23,8 @@
 
 .mindmap-scroll-area {
   width: 100%;
+  max-width: 100% !important;
+  min-width: 0 !important;
   overflow: hidden;
   padding: var(--spacing-lg) var(--spacing-md);
   background: rgba(0, 0, 0, 0.15);
@@ -28,6 +33,7 @@
   min-height: 380px;
   cursor: grab;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .theme-light .mindmap-scroll-area {

@@ -181,3 +181,42 @@
   background-color: rgba(37, 99, 235, 0.08);
   color: #1d4ed8;
 }
+
+/* Responsive Caption Sizes */
+@media (max-width: 1024px) {
+  .caption-en {
+    font-size: 15px !important;
+  }
+  .caption-vi {
+    font-size: 13px !important;
+  }
+  .caption-overlay {
+    padding: 10px 14px !important;
+    max-width: 90% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .caption-en {
+    font-size: 13px !important;
+  }
+  .caption-vi {
+    font-size: 11px !important;
+  }
+  .caption-overlay {
+    padding: 8px 12px !important;
+    max-width: 95% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .caption-en {
+    font-size: 11px !important;
+  }
+  .caption-vi {
+    font-size: 10px !important;
+  }
+  .caption-overlay {
+    padding: 6px 10px !important;
+  }
+}

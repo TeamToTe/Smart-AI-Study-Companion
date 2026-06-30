@@ -313,15 +313,50 @@ header {
 .mobile-controls-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 12px;
   width: 100%;
 }
 
-.mobile-controls-row .lang-toggle-container,
+.mobile-controls-row > * {
+  flex: 1 !important;
+  width: 100% !important;
+}
+
+/* Make language switcher a rounded rectangle on mobile */
+.mobile-controls-row .lang-toggle-container {
+  width: 100% !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  padding: 3px !important;
+  box-sizing: border-box;
+}
+
+.mobile-controls-row .lang-slider {
+  border-radius: 9px !important;
+}
+
+/* Make theme switcher a rounded rectangle on mobile */
 .mobile-controls-row .theme-toggle {
-  flex: none !important;
-  width: auto;
+  width: 100% !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-sizing: border-box;
+}
+
+.mobile-controls-row .theme-toggle-text {
+  display: inline-block !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--text-secondary) !important;
+}
+
+.theme-light .mobile-controls-row .theme-toggle-text {
+  color: #475569 !important;
 }
 
 .mobile-menu-drawer .btn-logout,
