@@ -37,7 +37,7 @@ export default function App() {
   const [isProcessed, setIsProcessed] = useState(false);
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [videoOverlayCc, setVideoOverlayCc] = useState(false);
+  const [videoOverlayCc, setVideoOverlayCc] = useState(true);
   const [pauseTrigger, setPauseTrigger] = useState(0);
   
   // Auth state
