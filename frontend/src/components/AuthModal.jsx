@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, X, Eye, EyeOff, Sparkles, AlertCircle } from 'lucide-react';
 import './AuthModal.css';
 
-export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
-  const { signIn, signUp, resetPassword } = useAuth();
+export default function AuthModal({ isOpen, onClose, lang = 'vi', initialMode = 'signin' }) {
+  const { signIn, signUp, resetPassword, updatePassword, setIsRecovering } = useAuth();
   
-  // Modes: 'signin' | 'signup' | 'forgot'
-  const [mode, setMode] = useState('signin');
+  // Modes: 'signin' | 'signup' | 'forgot' | 'update-password'
+  const [mode, setMode] = useState(initialMode);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+    }
+  }, [initialMode, isOpen]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,6 +33,10 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
         subtitleSignUp: "Start protecting academic terms and transcribing videos",
         titleForgot: "Reset Password",
         subtitleForgot: "We'll send you an email to reset your password",
+        titleUpdatePassword: "Reset Password",
+        subtitleUpdatePassword: "Enter your new password below",
+        btnUpdate: "Update Password",
+        successPasswordUpdated: "Password updated successfully!",
         emailLabel: "Email Address",
         emailPlaceholder: "name@example.com",
         passwordLabel: "Password",
@@ -53,6 +63,10 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
         subtitleSignUp: "Bắt đầu bảo vệ thuật ngữ và dịch bài giảng tự động",
         titleForgot: "Khôi Phục Mật Khẩu",
         subtitleForgot: "Chúng tôi sẽ gửi email khôi phục mật khẩu cho bạn",
+        titleUpdatePassword: "Cập Nhật Mật Khẩu",
+        subtitleUpdatePassword: "Nhập mật khẩu mới của bạn bên dưới",
+        btnUpdate: "Cập Nhật Mật Khẩu",
+        successPasswordUpdated: "Cập nhật mật khẩu thành công!",
         emailLabel: "Địa chỉ Email",
         emailPlaceholder: "ten@vi-du.com",
         passwordLabel: "Mật khẩu",
@@ -89,7 +103,7 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!email) {
+    if (mode !== 'update-password' && !email) {
       setErrorMsg(t('errorEmptyFields'));
       return;
     }
@@ -129,6 +143,24 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
         } else {
           setSuccessMsg(t('successResetSent'));
         }
+      } else if (mode === 'update-password') {
+        if (password !== confirmPassword) {
+          setErrorMsg(t('errorPasswordMismatch'));
+          setSubmitting(false);
+          return;
+        }
+        const { error } = await updatePassword(password);
+        if (error) {
+          setErrorMsg(error.message);
+        } else {
+          setSuccessMsg(t('successPasswordUpdated'));
+          if (setIsRecovering) {
+            setIsRecovering(false);
+          }
+          setTimeout(() => {
+            onClose();
+          }, 2000);
+        }
       }
     } catch (err) {
       setErrorMsg(t('errorGeneral'));
@@ -159,11 +191,13 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
             {mode === 'signin' && t('titleSignIn')}
             {mode === 'signup' && t('titleSignUp')}
             {mode === 'forgot' && t('titleForgot')}
+            {mode === 'update-password' && t('titleUpdatePassword')}
           </h2>
           <p>
             {mode === 'signin' && t('subtitleSignIn')}
             {mode === 'signup' && t('subtitleSignUp')}
             {mode === 'forgot' && t('subtitleForgot')}
+            {mode === 'update-password' && t('subtitleUpdatePassword')}
           </p>
         </div>
 
@@ -182,23 +216,25 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="auth-modal-form">
-          <div className="form-group">
-            <label htmlFor="auth-email">{t('emailLabel')}</label>
-            <div className="input-wrapper">
-              <Mail className="input-icon" size={16} />
-              <input
-                id="auth-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t('emailPlaceholder')}
-                disabled={submitting}
-              />
+          {mode !== 'update-password' && (
+            <div className="form-group">
+              <label htmlFor="auth-email">{t('emailLabel')}</label>
+              <div className="input-wrapper">
+                <Mail className="input-icon" size={16} />
+                <input
+                  id="auth-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('emailPlaceholder')}
+                  disabled={submitting}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          {mode !== 'forgot' && (
+          {(mode === 'signin' || mode === 'signup' || mode === 'update-password') && (
             <div className="form-group">
               <div className="label-row">
                 <label htmlFor="auth-password">{t('passwordLabel')}</label>
@@ -237,7 +273,7 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
             </div>
           )}
 
-          {mode === 'signup' && (
+          {(mode === 'signup' || mode === 'update-password') && (
             <div className="form-group">
               <label htmlFor="auth-confirm-password">{t('confirmPasswordLabel')}</label>
               <div className="input-wrapper">
@@ -268,6 +304,7 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
                 {mode === 'signin' && t('btnSignIn')}
                 {mode === 'signup' && t('btnSignUp')}
                 {mode === 'forgot' && t('btnReset')}
+                {mode === 'update-password' && t('btnUpdate')}
               </>
             )}
           </button>
@@ -294,6 +331,14 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi' }) {
           {mode === 'forgot' && (
             <button type="button" className="text-btn back-btn" onClick={() => switchMode('signin')} disabled={submitting}>
               {t('backToLogin')}
+            </button>
+          )}
+          {mode === 'update-password' && (
+            <button type="button" className="text-btn back-btn" onClick={() => {
+              if (setIsRecovering) setIsRecovering(false);
+              onClose();
+            }} disabled={submitting}>
+              {lang === 'vi' ? 'Hủy' : 'Cancel'}
             </button>
           )}
         </div>

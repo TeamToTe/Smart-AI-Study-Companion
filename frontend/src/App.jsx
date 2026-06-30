@@ -41,8 +41,17 @@ export default function App() {
   const [pauseTrigger, setPauseTrigger] = useState(0);
   
   // Auth state
-  const { user, session, signOut, loading: authLoading } = useAuth();
+  const { user, session, signOut, loading: authLoading, isRecovering, setIsRecovering } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('signin');
+
+  // Handle password recovery flow from email
+  useEffect(() => {
+    if (isRecovering) {
+      setAuthModalMode('update-password');
+      setIsAuthModalOpen(true);
+    }
+  }, [isRecovering]);
 
   // Custom Modal States (Confirm/Alert)
   const [modalConfig, setModalConfig] = useState({
@@ -204,6 +213,7 @@ export default function App() {
   // 5. Handle Video Submission & API calls
   const handleUrlSubmit = async (submittedUrl) => {
     if (!user) {
+      setAuthModalMode('signin');
       setIsAuthModalOpen(true);
       return;
     }
@@ -515,7 +525,10 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <button className="btn-primary btn-login" onClick={() => setIsAuthModalOpen(true)}>
+            <button className="btn-primary btn-login" onClick={() => {
+              setAuthModalMode('signin');
+              setIsAuthModalOpen(true);
+            }}>
               <LogIn size={14} />
               <span>{t('signIn')}</span>
             </button>
@@ -635,8 +648,14 @@ export default function App() {
       {/* Auth Modal */}
       <AuthModal 
         isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          if (isRecovering && setIsRecovering) {
+            setIsRecovering(false);
+          }
+        }} 
         lang={lang} 
+        initialMode={authModalMode}
       />
     </div>
   );
