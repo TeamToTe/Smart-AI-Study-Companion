@@ -17,7 +17,13 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang }) {
+// Check if text is originally Vietnamese to avoid double Vietnamese subtitles
+function isVietnameseText(text) {
+  if (!text) return false;
+  return /[áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ]/.test(text);
+}
+
+export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang, pauseTrigger }) {
   const { session } = useAuth();
   const [dynamicGlossary, setDynamicGlossary] = useState({});
   const [hoveredTerm, setHoveredTerm] = useState(null);
@@ -85,6 +91,9 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
   };
 
   const handleMouseEnter = (e, termKey) => {
+    if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
+      playerRef.current.pauseVideo();
+    }
     const rect = e.target.getBoundingClientRect();
     const tooltipWidth = 280;
     const tooltipHeight = 150;
@@ -231,9 +240,10 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
     };
   }, [isDragging]);
 
-  // Identify active segment for overlay subtitles
+  // Identify active segment for overlay subtitles (with 400ms offset to compensate for YouTube subtitle lag)
+  const syncOffset = 0.4;
   const activeSegment = (showOverlay && segments && segments.length > 0)
-    ? segments.find(seg => currentTime >= seg.start && currentTime <= seg.end)
+    ? segments.find(seg => (currentTime + syncOffset) >= seg.start && (currentTime + syncOffset) <= seg.end)
     : null;
 
   // Handle fullscreen changes programmatically
@@ -350,6 +360,10 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
             startPollingProgress();
           } else {
             stopPollingProgress();
+            if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+              const exactTime = playerRef.current.getCurrentTime();
+              onProgress(exactTime);
+            }
           }
         }
       }
@@ -375,6 +389,21 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
       }
     }
   }, [seekTime]);
+
+  // Sync current time on overlay toggle to ensure subtitles show up instantly even when paused
+  useEffect(() => {
+    if (showOverlay && playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+      const time = playerRef.current.getCurrentTime();
+      onProgress(time);
+    }
+  }, [showOverlay, onProgress]);
+
+  // Handle external pause requests (e.g., when hovering over a domain word in SubtitleViewer)
+  useEffect(() => {
+    if (playerRef.current && pauseTrigger > 0 && typeof playerRef.current.pauseVideo === 'function') {
+      playerRef.current.pauseVideo();
+    }
+  }, [pauseTrigger]);
 
   const startPollingProgress = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -419,13 +448,21 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
-          <p className="caption-en">
-            {renderHighlightedText(activeSegment.original_text || activeSegment.text, activeSegment.domain_words)}
-          </p>
-          {lang === 'vi' && (
+          {isVietnameseText(activeSegment.original_text) ? (
             <p className="caption-vi">
-              {renderHighlightedText(activeSegment.original_text ? activeSegment.text : getMockTranslationForOverlay(activeSegment.text), activeSegment.domain_words)}
+              {renderHighlightedText(activeSegment.text, activeSegment.domain_words)}
             </p>
+          ) : (
+            <>
+              <p className="caption-en">
+                {renderHighlightedText(activeSegment.original_text || activeSegment.text, activeSegment.domain_words)}
+              </p>
+              {lang === 'vi' && (
+                <p className="caption-vi">
+                  {renderHighlightedText(activeSegment.original_text ? activeSegment.text : getMockTranslationForOverlay(activeSegment.text), activeSegment.domain_words)}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

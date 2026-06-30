@@ -100,6 +100,16 @@
   white-space: nowrap;
 }
 
+.input-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: -16px;
+  margin-bottom: 24px;
+  font-weight: 500;
+  font-style: italic;
+}
+
 .url-error-msg {
   color: var(--color-danger);
   font-size: 13px;
@@ -456,4 +466,77 @@
   font-size: 13px;
   font-weight: 700;
   color: var(--text-secondary);
+}
+
+/* Hackathon Feedback Survey Banner */
+.survey-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 900px;
+  padding: 16px 24px;
+  background: rgba(var(--color-primary-rgb), 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-top: 12px;
+  margin-bottom: 40px;
+  gap: 20px;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.survey-banner:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-accent);
+}
+
+.survey-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+}
+
+.survey-icon {
+  flex-shrink: 0;
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.survey-text h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+}
+
+.survey-text p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.survey-btn {
+  padding: 8px 20px;
+  font-size: 13px;
+  height: fit-content;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .survey-banner {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .survey-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
 }

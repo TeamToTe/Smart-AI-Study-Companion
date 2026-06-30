@@ -89,6 +89,10 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
         </div>
       </form>
 
+      <div className="input-hint">
+        * {t('videoDurationHint')}
+      </div>
+
       {error && (
         <div className="url-error-msg animate-fade-in">
           {error}
@@ -187,6 +191,28 @@ export default function LandingPage({ onSubmit, history, onDeleteHistory, onClea
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Feedback Survey Banner for Hackathon (Only shown if user has history/has experienced the app) */}
+      {history && history.length > 0 && (
+        <div className="survey-banner glass">
+          <div className="survey-content">
+            <Sparkles size={20} className="survey-icon" style={{ color: 'var(--color-warning, #f59e0b)' }} />
+            <div className="survey-text">
+              <h3>{t('surveyTitle')}</h3>
+              <p>{t('surveyDesc')}</p>
+            </div>
+          </div>
+          <a 
+            href="https://docs.google.com/forms/d/e/1FAIpQLSccMyV6meG-NjsJYqjAls43GR9x6JmrZAAvHN-l8bc0Z0J1cA/viewform?usp=dialog" 
+            target="_blank" 
+            rel="noreferrer"
+            className="btn-primary survey-btn"
+            style={{ textDecoration: 'none' }}
+          >
+            {t('surveyAction')}
+          </a>
         </div>
       )}
 

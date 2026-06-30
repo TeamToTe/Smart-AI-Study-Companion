@@ -38,10 +38,20 @@ export default function App() {
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
   const [progress, setProgress] = useState(0);
   const [videoOverlayCc, setVideoOverlayCc] = useState(false);
+  const [pauseTrigger, setPauseTrigger] = useState(0);
   
   // Auth state
-  const { user, session, signOut, loading: authLoading } = useAuth();
+  const { user, session, signOut, loading: authLoading, isRecovering, setIsRecovering } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('signin');
+
+  // Handle password recovery flow from email
+  useEffect(() => {
+    if (isRecovering) {
+      setAuthModalMode('update-password');
+      setIsAuthModalOpen(true);
+    }
+  }, [isRecovering]);
 
   // Custom Modal States (Confirm/Alert)
   const [modalConfig, setModalConfig] = useState({
@@ -203,6 +213,7 @@ export default function App() {
   // 5. Handle Video Submission & API calls
   const handleUrlSubmit = async (submittedUrl) => {
     if (!user) {
+      setAuthModalMode('signin');
       setIsAuthModalOpen(true);
       return;
     }
@@ -514,7 +525,10 @@ export default function App() {
               </button>
             </div>
           ) : (
-            <button className="btn-primary btn-login" onClick={() => setIsAuthModalOpen(true)}>
+            <button className="btn-primary btn-login" onClick={() => {
+              setAuthModalMode('signin');
+              setIsAuthModalOpen(true);
+            }}>
               <LogIn size={14} />
               <span>{t('signIn')}</span>
             </button>
@@ -562,6 +576,7 @@ export default function App() {
                   currentTime={currentTime}
                   showOverlay={videoOverlayCc}
                   lang={lang}
+                  pauseTrigger={pauseTrigger}
                 />
                 <SubtitleViewer 
                   segments={segments} 
@@ -571,6 +586,7 @@ export default function App() {
                   lang={lang}
                   videoOverlayCc={videoOverlayCc}
                   setVideoOverlayCc={setVideoOverlayCc}
+                  onHoverDomainWord={() => setPauseTrigger(prev => prev + 1)}
                 />
               </div>
 
@@ -584,7 +600,7 @@ export default function App() {
                     <FlashcardKit segments={segments} t={t} videoUrl={url} />
                   </div>
                   <div style={{ display: activeTab === 'quiz' ? 'block' : 'none', height: '100%' }}>
-                    <QuizKit segments={segments} t={t} videoUrl={url} />
+                    <QuizKit segments={segments} t={t} videoUrl={url} lang={lang} />
                   </div>
                   <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
                     <MindmapKit segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
@@ -614,7 +630,13 @@ export default function App() {
 
       {/* App Footer */}
       <footer>
-        <p>{t('footerText')} &copy; 2026 | <a href="https://github.com/TeamToTe/Smart-AI-Study-Companion" target="_blank" rel="noreferrer">GitHub Repository</a></p>
+        <p>
+          {t('footerText')} &copy; 2026 |{' '}
+          <a href="https://github.com/TeamToTe/Smart-AI-Study-Companion" target="_blank" rel="noreferrer">GitHub Repository</a> |{' '}
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSccMyV6meG-NjsJYqjAls43GR9x6JmrZAAvHN-l8bc0Z0J1cA/viewform?usp=dialog" target="_blank" rel="noreferrer" className="text-gradient" style={{ fontWeight: 'bold' }}>
+            {t('feedbackSurvey')}
+          </a>
+        </p>
       </footer>
 
       {/* Custom Confirmation / Alert Modal */}
@@ -632,8 +654,14 @@ export default function App() {
       {/* Auth Modal */}
       <AuthModal 
         isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          if (isRecovering && setIsRecovering) {
+            setIsRecovering(false);
+          }
+        }} 
         lang={lang} 
+        initialMode={authModalMode}
       />
     </div>
   );

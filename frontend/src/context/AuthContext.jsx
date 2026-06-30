@@ -9,12 +9,16 @@ const AuthContext = createContext({
   signIn: async () => {},
   signOut: async () => {},
   resetPassword: async () => {},
+  updatePassword: async () => {},
+  isRecovering: false,
+  setIsRecovering: () => {},
 });
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isRecovering, setIsRecovering] = useState(false);
 
   useEffect(() => {
     // 1. Get initial session
@@ -33,10 +37,14 @@ export const AuthProvider = ({ children }) => {
     getInitialSession();
 
     // 2. Listen to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user || null);
       setLoading(false);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovering(true);
+      }
     });
 
     return () => {
@@ -111,6 +119,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updatePassword = async (newPassword) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating password:', error.message);
+      return { error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     user,
     session,
@@ -119,6 +143,9 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     resetPassword,
+    updatePassword,
+    isRecovering,
+    setIsRecovering,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

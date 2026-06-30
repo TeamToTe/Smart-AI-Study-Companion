@@ -19,18 +19,29 @@ async def validate_video_upload_limit(
     user_id: str,
     db_service: DatabaseService,
 ) -> None:
+    import os
+    is_prod = os.getenv("ENV") == "production"
+    
     try:
         sessions = await db_service.get_user_sessions(user_token, user_id)
+        if not is_prod:
+            return
+            
         existing_urls = {s["video_url"].strip().lower() for s in sessions}
         if video_url.strip().lower() not in existing_urls:
             if len(existing_urls) >= 2:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Bạn đã đạt giới hạn 2 video. Trợ lý học tập chỉ hỗ trợ xử lý tối đa 2 video cho mỗi người dùng."
+                    detail="Bạn đã đạt giới hạn 2 video. Trợ lý học tập chỉ hỗ trợ xử lý tối đa 2 video cho mỗi người dùng trên production."
                 )
     except HTTPException:
         raise
     except Exception as e:
+        if is_prod:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Lỗi kết nối cơ sở dữ liệu trên môi trường production: {e}"
+            )
         import logging
         logger = logging.getLogger(__name__)
         logger.warning(f"Failed to check video upload limit: {e}. Proceeding anyway...")

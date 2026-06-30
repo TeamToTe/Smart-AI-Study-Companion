@@ -10,6 +10,12 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Check if text is originally Vietnamese to avoid double Vietnamese subtitles
+function isVietnameseText(text) {
+  if (!text) return false;
+  return /[áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ]/.test(text);
+}
+
 // Eased smooth scroll that doesn't trigger Chromium window scroll bug
 function smoothScrollTo(element, target, duration = 250) {
   const start = element.scrollTop;
@@ -40,7 +46,7 @@ function smoothScrollTo(element, target, duration = 250) {
   requestAnimationFrame(animateScroll);
 }
 
-export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc }) {
+export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc, onHoverDomainWord }) {
   const { session } = useAuth();
   const [activeIdx, setActiveIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -52,17 +58,20 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
   const containerRef = useRef(null);
   const activeLineRef = useRef(null);
 
-  // 1. Identify active segment index
+  // 1. Identify active segment index (with 400ms offset to compensate for YouTube subtitle lag)
   useEffect(() => {
     if (!segments || segments.length === 0) return;
     
-    // Find segment matching current time
-    let idx = segments.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
+    const syncOffset = 0.4;
+    const adjustedTime = currentTime + syncOffset;
+    
+    // Find segment matching adjusted time
+    let idx = segments.findIndex(seg => adjustedTime >= seg.start && adjustedTime <= seg.end);
     
     // If not found, find the closest active segment
     if (idx === -1) {
       idx = segments.findIndex((seg, i) => 
-        currentTime >= seg.start && (i === segments.length - 1 || currentTime < segments[i + 1].start)
+        adjustedTime >= seg.start && (i === segments.length - 1 || adjustedTime < segments[i + 1].start)
       );
     }
 
@@ -185,6 +194,9 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
 
   // 6. Glossary hover handlers
   const handleMouseEnter = (e, termKey) => {
+    if (onHoverDomainWord) {
+      onHoverDomainWord();
+    }
     const rect = e.target.getBoundingClientRect();
     const tooltipWidth = 280;
     const tooltipHeight = 150;
@@ -262,15 +274,23 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
                   <span>{formatTime(seg.start)}</span>
                 </button>
                 <div className="subtitle-content">
-                  {/* Original English Text (Entity-Protected) */}
-                  <p className="sub-text-en">
-                    {renderHighlightedText(seg.original_text || seg.text, seg.domain_words)}
-                  </p>
-                  {/* Vietnamese Context-aware Translation */}
-                  {lang === 'vi' && (
+                  {isVietnameseText(seg.original_text) ? (
                     <p className="sub-text-vi">
-                      {renderHighlightedText(seg.original_text ? seg.text : getMockTranslation(seg.text), seg.domain_words)}
+                      {renderHighlightedText(seg.text, seg.domain_words)}
                     </p>
+                  ) : (
+                    <>
+                      {/* Original English Text (Entity-Protected) */}
+                      <p className="sub-text-en">
+                        {renderHighlightedText(seg.original_text || seg.text, seg.domain_words)}
+                      </p>
+                      {/* Vietnamese Context-aware Translation */}
+                      {lang === 'vi' && (
+                        <p className="sub-text-vi">
+                          {renderHighlightedText(seg.original_text ? seg.text : getMockTranslation(seg.text), seg.domain_words)}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
