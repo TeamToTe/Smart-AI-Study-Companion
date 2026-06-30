@@ -5,8 +5,6 @@
     <link id="favicon" rel="icon" type="image/png" href="/logo.png" />
     <script>
       (function() {
-        const favicon = document.getElementById('favicon');
-        if (!favicon) return;
         const img = new Image();
         img.src = '/logo.png';
         const updateFavicon = () => {
@@ -19,12 +17,24 @@
             ctx.filter = 'invert(1)';
           }
           ctx.drawImage(img, 0, 0, 32, 32);
-          favicon.href = canvas.toDataURL();
+          
+          const oldFavicon = document.getElementById('favicon');
+          if (oldFavicon) {
+            const newFavicon = oldFavicon.cloneNode(true);
+            newFavicon.href = canvas.toDataURL();
+            oldFavicon.parentNode.replaceChild(newFavicon, oldFavicon);
+          }
         };
-        img.onload = updateFavicon;
+        if (img.complete) {
+          updateFavicon();
+        } else {
+          img.onload = updateFavicon;
+        }
         const matcher = window.matchMedia('(prefers-color-scheme: dark)');
         if (matcher.addEventListener) {
           matcher.addEventListener('change', updateFavicon);
+        } else if (matcher.addListener) {
+          matcher.addListener(updateFavicon);
         }
       })();
     </script>
