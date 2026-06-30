@@ -40,7 +40,7 @@ function smoothScrollTo(element, target, duration = 250) {
   requestAnimationFrame(animateScroll);
 }
 
-export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc }) {
+export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc, onHoverDomainWord }) {
   const { session } = useAuth();
   const [activeIdx, setActiveIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -185,6 +185,9 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
 
   // 6. Glossary hover handlers
   const handleMouseEnter = (e, termKey) => {
+    if (onHoverDomainWord) {
+      onHoverDomainWord();
+    }
     const rect = e.target.getBoundingClientRect();
     const tooltipWidth = 280;
     const tooltipHeight = 150;

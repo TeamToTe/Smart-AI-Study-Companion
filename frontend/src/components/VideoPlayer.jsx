@@ -17,7 +17,7 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang }) {
+export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang, pauseTrigger }) {
   const { session } = useAuth();
   const [dynamicGlossary, setDynamicGlossary] = useState({});
   const [hoveredTerm, setHoveredTerm] = useState(null);
@@ -85,6 +85,9 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
   };
 
   const handleMouseEnter = (e, termKey) => {
+    if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
+      playerRef.current.pauseVideo();
+    }
     const rect = e.target.getBoundingClientRect();
     const tooltipWidth = 280;
     const tooltipHeight = 150;
@@ -350,6 +353,10 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
             startPollingProgress();
           } else {
             stopPollingProgress();
+            if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+              const exactTime = playerRef.current.getCurrentTime();
+              onProgress(exactTime);
+            }
           }
         }
       }
@@ -375,6 +382,21 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
       }
     }
   }, [seekTime]);
+
+  // Sync current time on overlay toggle to ensure subtitles show up instantly even when paused
+  useEffect(() => {
+    if (showOverlay && playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+      const time = playerRef.current.getCurrentTime();
+      onProgress(time);
+    }
+  }, [showOverlay, onProgress]);
+
+  // Handle external pause requests (e.g., when hovering over a domain word in SubtitleViewer)
+  useEffect(() => {
+    if (playerRef.current && pauseTrigger > 0 && typeof playerRef.current.pauseVideo === 'function') {
+      playerRef.current.pauseVideo();
+    }
+  }, [pauseTrigger]);
 
   const startPollingProgress = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);

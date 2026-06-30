@@ -38,6 +38,7 @@ export default function App() {
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
   const [progress, setProgress] = useState(0);
   const [videoOverlayCc, setVideoOverlayCc] = useState(false);
+  const [pauseTrigger, setPauseTrigger] = useState(0);
   
   // Auth state
   const { user, session, signOut, loading: authLoading } = useAuth();
@@ -562,6 +563,7 @@ export default function App() {
                   currentTime={currentTime}
                   showOverlay={videoOverlayCc}
                   lang={lang}
+                  pauseTrigger={pauseTrigger}
                 />
                 <SubtitleViewer 
                   segments={segments} 
@@ -571,6 +573,7 @@ export default function App() {
                   lang={lang}
                   videoOverlayCc={videoOverlayCc}
                   setVideoOverlayCc={setVideoOverlayCc}
+                  onHoverDomainWord={() => setPauseTrigger(prev => prev + 1)}
                 />
               </div>
 
