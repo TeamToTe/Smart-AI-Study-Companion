@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User } from 'lucide-react';
+import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User, Menu, X } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import SkeletonLoader from './components/SkeletonLoader';
 import VideoPlayer from './components/VideoPlayer';
@@ -44,6 +44,7 @@ export default function App() {
   const { user, session, signOut, loading: authLoading, isRecovering, setIsRecovering } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('signin');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Handle password recovery flow from email
   useEffect(() => {
@@ -509,6 +510,7 @@ export default function App() {
           <span>Study<span className="text-gradient">Mind</span></span>
         </div>
 
+        {/* Desktop Controls */}
         <div className="header-controls">
           <LanguageToggle lang={lang} setLang={setLang} />
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
@@ -534,6 +536,53 @@ export default function App() {
             </button>
           )}
         </div>
+
+        {/* Mobile Menu Toggle Button */}
+        <button 
+          className="mobile-menu-toggle" 
+          onClick={() => setMobileMenuOpen(prev => !prev)}
+          aria-label="Toggle mobile menu"
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+
+        {/* Mobile Menu Drawer */}
+        {mobileMenuOpen && (
+          <div className="mobile-menu-drawer glass">
+            <div className="mobile-menu-group">
+              <div className="mobile-controls-row">
+                <LanguageToggle lang={lang} setLang={setLang} />
+                <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
+              </div>
+            </div>
+            
+            <div className="mobile-menu-divider" />
+            
+            <div className="mobile-menu-group">
+              {user ? (
+                <div className="mobile-user-info-wrapper">
+                  <div className="mobile-user-details">
+                    <User size={14} />
+                    <span className="mobile-user-email">{user.email}</span>
+                  </div>
+                  <button className="btn-secondary btn-logout w-full" onClick={() => { signOut(); setMobileMenuOpen(false); }}>
+                    <LogOut size={14} />
+                    <span>{t('signOut')}</span>
+                  </button>
+                </div>
+              ) : (
+                <button className="btn-primary btn-login w-full" onClick={() => {
+                  setAuthModalMode('signin');
+                  setIsAuthModalOpen(true);
+                  setMobileMenuOpen(false);
+                }}>
+                  <LogIn size={14} />
+                  <span>{t('signIn')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Area */}

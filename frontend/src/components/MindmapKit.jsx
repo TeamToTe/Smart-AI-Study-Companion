@@ -12,7 +12,9 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
   const [paths, setPaths] = useState([]);
 
   // Interactive Zoom/Pan states
-  const [zoom, setZoom] = useState(1.0);
+  const [zoom, setZoom] = useState(() => {
+    return typeof window !== 'undefined' && window.innerWidth <= 768 ? 0.55 : 1.0;
+  });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -432,6 +434,30 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
     setIsDragging(false);
   };
 
+  // Touch Drag/Pan Handlers for Mobile Devices
+  const handleTouchStart = (e) => {
+    if (e.target.closest('.mindmap-node')) {
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setPan({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   // Zooming Handlers
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 0.1, 2.0));
@@ -465,6 +491,9 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <div 
           ref={containerRef} 
