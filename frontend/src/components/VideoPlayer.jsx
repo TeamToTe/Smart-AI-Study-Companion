@@ -234,9 +234,10 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
     };
   }, [isDragging]);
 
-  // Identify active segment for overlay subtitles
+  // Identify active segment for overlay subtitles (with 400ms offset to compensate for YouTube subtitle lag)
+  const syncOffset = 0.4;
   const activeSegment = (showOverlay && segments && segments.length > 0)
-    ? segments.find(seg => currentTime >= seg.start && currentTime <= seg.end)
+    ? segments.find(seg => (currentTime + syncOffset) >= seg.start && (currentTime + syncOffset) <= seg.end)
     : null;
 
   // Handle fullscreen changes programmatically

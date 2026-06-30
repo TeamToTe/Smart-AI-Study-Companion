@@ -52,17 +52,20 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
   const containerRef = useRef(null);
   const activeLineRef = useRef(null);
 
-  // 1. Identify active segment index
+  // 1. Identify active segment index (with 400ms offset to compensate for YouTube subtitle lag)
   useEffect(() => {
     if (!segments || segments.length === 0) return;
     
-    // Find segment matching current time
-    let idx = segments.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
+    const syncOffset = 0.4;
+    const adjustedTime = currentTime + syncOffset;
+    
+    // Find segment matching adjusted time
+    let idx = segments.findIndex(seg => adjustedTime >= seg.start && adjustedTime <= seg.end);
     
     // If not found, find the closest active segment
     if (idx === -1) {
       idx = segments.findIndex((seg, i) => 
-        currentTime >= seg.start && (i === segments.length - 1 || currentTime < segments[i + 1].start)
+        adjustedTime >= seg.start && (i === segments.length - 1 || adjustedTime < segments[i + 1].start)
       );
     }
 
