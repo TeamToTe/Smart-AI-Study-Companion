@@ -183,6 +183,9 @@ footer a:hover {
   }
   .right-column {
     position: static;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
   }
   .workspace-back-btn {
     width: 100%;

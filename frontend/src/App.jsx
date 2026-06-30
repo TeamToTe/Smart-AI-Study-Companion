@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User } from 'lucide-react';
+import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User, Menu, X } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import SkeletonLoader from './components/SkeletonLoader';
 import VideoPlayer from './components/VideoPlayer';
@@ -37,13 +37,17 @@ export default function App() {
   const [isProcessed, setIsProcessed] = useState(false);
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [videoOverlayCc, setVideoOverlayCc] = useState(false);
+  const [videoOverlayCc, setVideoOverlayCc] = useState(() => {
+    const saved = localStorage.getItem('studymind_video_overlay_cc');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [pauseTrigger, setPauseTrigger] = useState(0);
   
   // Auth state
   const { user, session, signOut, loading: authLoading, isRecovering, setIsRecovering } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('signin');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Handle password recovery flow from email
   useEffect(() => {
@@ -83,6 +87,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('studymind_lang', lang);
   }, [lang]);
+
+  // Save videoOverlayCc preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('studymind_video_overlay_cc', videoOverlayCc);
+  }, [videoOverlayCc]);
 
   // Save active tab preference to sessionStorage
   useEffect(() => {
@@ -509,6 +518,7 @@ export default function App() {
           <span>Study<span className="text-gradient">Mind</span></span>
         </div>
 
+        {/* Desktop Controls */}
         <div className="header-controls">
           <LanguageToggle lang={lang} setLang={setLang} />
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
@@ -534,6 +544,53 @@ export default function App() {
             </button>
           )}
         </div>
+
+        {/* Mobile Menu Toggle Button */}
+        <button 
+          className="mobile-menu-toggle" 
+          onClick={() => setMobileMenuOpen(prev => !prev)}
+          aria-label="Toggle mobile menu"
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+
+        {/* Mobile Menu Drawer */}
+        {mobileMenuOpen && (
+          <div className="mobile-menu-drawer glass">
+            <div className="mobile-menu-group">
+              <div className="mobile-controls-row">
+                <LanguageToggle lang={lang} setLang={setLang} />
+                <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
+              </div>
+            </div>
+            
+            <div className="mobile-menu-divider" />
+            
+            <div className="mobile-menu-group">
+              {user ? (
+                <div className="mobile-user-info-wrapper">
+                  <div className="mobile-user-details">
+                    <User size={14} />
+                    <span className="mobile-user-email">{user.email}</span>
+                  </div>
+                  <button className="btn-secondary btn-logout w-full" onClick={() => { signOut(); setMobileMenuOpen(false); }}>
+                    <LogOut size={14} />
+                    <span>{t('signOut')}</span>
+                  </button>
+                </div>
+              ) : (
+                <button className="btn-primary btn-login w-full" onClick={() => {
+                  setAuthModalMode('signin');
+                  setIsAuthModalOpen(true);
+                  setMobileMenuOpen(false);
+                }}>
+                  <LogIn size={14} />
+                  <span>{t('signIn')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Area */}
@@ -597,13 +654,13 @@ export default function App() {
                     <RAGChatbot segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
                   </div>
                   <div style={{ display: activeTab === 'flashcards' ? 'block' : 'none', height: '100%' }}>
-                    <FlashcardKit segments={segments} t={t} videoUrl={url} />
+                    <FlashcardKit segments={segments} t={t} videoUrl={url} lang={lang} />
                   </div>
                   <div style={{ display: activeTab === 'quiz' ? 'block' : 'none', height: '100%' }}>
                     <QuizKit segments={segments} t={t} videoUrl={url} lang={lang} />
                   </div>
                   <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
-                    <MindmapKit segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
+                    <MindmapKit segments={segments} onSeek={handleSeek} t={t} videoUrl={url} lang={lang} />
                   </div>
                 </SidebarTabs>
               </div>

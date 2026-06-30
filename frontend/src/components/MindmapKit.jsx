@@ -3,7 +3,7 @@ import { Network, ZoomIn, ZoomOut, RotateCcw, Play, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './MindmapKit.css';
 
-export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
+export default function MindmapKit({ segments, onSeek, t, videoUrl, lang }) {
   const { session } = useAuth();
   const [mindmapData, setMindmapData] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -12,7 +12,9 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
   const [paths, setPaths] = useState([]);
 
   // Interactive Zoom/Pan states
-  const [zoom, setZoom] = useState(1.0);
+  const [zoom, setZoom] = useState(() => {
+    return typeof window !== 'undefined' && window.innerWidth <= 768 ? 0.55 : 1.0;
+  });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -88,7 +90,7 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
     const fetchMindmap = async () => {
       // Check cache first
       if (videoUrl) {
-        const cacheKey = `studymind_cache_mindmap_${videoUrl.toLowerCase()}`;
+        const cacheKey = `studymind_cache_mindmap_${lang}_${videoUrl.toLowerCase()}`;
         const cachedDataStr = localStorage.getItem(cacheKey);
         if (cachedDataStr) {
           try {
@@ -117,7 +119,7 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
         const queryPrompt = 
           "You are an expert Content Summarizer and Mind Map Architect. Your task is to analyze the provided video transcript and extract the core concepts into a structured mind map format.\n\n" +
           "CRITICAL RULES:\n" +
-          "1. Language: Output MUST be in Vietnamese.\n" +
+          `1. Language: Output MUST be in ${lang === 'vi' ? 'Vietnamese' : 'English'}.\n` +
           "2. Extreme Conciseness: Keep labels extremely short. Max 2-4 words per label. Do NOT write full sentences.\n" +
           "3. NO TIMESTAMPS: Absolutely DO NOT include any timestamps (e.g., [00:00], 00:12) in the branch labels. Strip them out completely.\n" +
           "4. Strict Hierarchy: Exactly 1 root concept, 3 to 4 main branches, and exactly 2 sub-branches per main branch.\n" +
@@ -169,7 +171,7 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
           setSelectedNode(parsedData);
           
           if (videoUrl) {
-            const cacheKey = `studymind_cache_mindmap_${videoUrl.toLowerCase()}`;
+            const cacheKey = `studymind_cache_mindmap_${lang}_${videoUrl.toLowerCase()}`;
             localStorage.setItem(cacheKey, JSON.stringify(parsedData));
           }
         } else {
@@ -189,7 +191,7 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
       let data = null;
 
       if (text.includes("list") || text.includes("node") || text.includes("pointer")) {
-        data = {
+        data = lang === 'vi' ? {
           root_title: "Cấu trúc Linked List",
           branches: [
             {
@@ -208,9 +210,28 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
               sub_branches: ["Tìm kiếm Tuyến tính", "Thêm đầu Hằng số"]
             }
           ]
+        } : {
+          root_title: "Linked List Structure",
+          branches: [
+            {
+              id: "structure",
+              label: "Basic Components",
+              sub_branches: ["Data Node", "Linked Pointer"]
+            },
+            {
+              id: "operations",
+              label: "Core Operations",
+              sub_branches: ["Insert New Node", "Delete Old Node"]
+            },
+            {
+              id: "complexities",
+              label: "Time Complexity",
+              sub_branches: ["Linear Search", "Constant Prepend"]
+            }
+          ]
         };
       } else if (text.includes("fastapi") || text.includes("framework") || text.includes("endpoint")) {
-        data = {
+        data = lang === 'vi' ? {
           root_title: "Phát triển FastAPI",
           branches: [
             {
@@ -229,9 +250,28 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
               sub_branches: ["Đường dẫn Async", "Hệ thống Depends"]
             }
           ]
+        } : {
+          root_title: "FastAPI Development",
+          branches: [
+            {
+              id: "architecture",
+              label: "Core Architecture",
+              sub_branches: ["Starlette Router", "Uvicorn Server"]
+            },
+            {
+              id: "pydantic",
+              label: "Data Validation",
+              sub_branches: ["Pydantic Models", "Auto Validation"]
+            },
+            {
+              id: "async",
+              label: "Asynchronous",
+              sub_branches: ["Async Paths", "Depends System"]
+            }
+          ]
         };
       } else if (text.includes("gradient") || text.includes("loss") || text.includes("network") || text.includes("neural")) {
-        data = {
+        data = lang === 'vi' ? {
           root_title: "Thuật toán Gradient Descent",
           branches: [
             {
@@ -250,9 +290,28 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
               sub_branches: ["Lan truyền xuôi", "Lan truyền ngược"]
             }
           ]
+        } : {
+          root_title: "Gradient Descent Algorithm",
+          branches: [
+            {
+              id: "concepts",
+              label: "Core Concepts",
+              sub_branches: ["Loss Function", "Weights & Biases"]
+            },
+            {
+              id: "algorithm-steps",
+              label: "Parameter Updates",
+              sub_branches: ["Compute Derivatives", "Learning Rate"]
+            },
+            {
+              id: "training-loop",
+              label: "Training Loop",
+              sub_branches: ["Forward Propagation", "Backpropagation"]
+            }
+          ]
         };
       } else {
-        data = {
+        data = lang === 'vi' ? {
           root_title: "Hệ sinh thái StudyMind",
           branches: [
             {
@@ -266,6 +325,20 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
               sub_branches: ["Lưu trữ Vector", "Nhảy mốc thời gian"]
             }
           ]
+        } : {
+          root_title: "StudyMind Ecosystem",
+          branches: [
+            {
+              id: "transcription",
+              label: "Audio Transcription",
+              sub_branches: ["Whisper Recognition", "Entity Filtering"]
+            },
+            {
+              id: "rag-video",
+              label: "AI RAG Assistant",
+              sub_branches: ["Vector Storage", "Timestamp Seeking"]
+            }
+          ]
         };
       }
 
@@ -274,7 +347,7 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
     };
 
     fetchMindmap();
-  }, [segments, session, videoUrl]);
+  }, [segments, session, videoUrl, lang]);
 
   // Redraw SVG paths connecting nodes (adjusting coordinates by zoom factor)
   const redrawPaths = () => {
@@ -432,6 +505,30 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
     setIsDragging(false);
   };
 
+  // Touch Drag/Pan Handlers for Mobile Devices
+  const handleTouchStart = (e) => {
+    if (e.target.closest('.mindmap-node')) {
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setPan({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   // Zooming Handlers
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 0.1, 2.0));
@@ -465,6 +562,9 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl }) {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpOrLeave}
         onMouseLeave={handleMouseUpOrLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <div 
           ref={containerRef} 

@@ -12,9 +12,15 @@ export default function ThemeToggle({ theme, toggleTheme, t }) {
     >
       <div className={`icon-container ${theme}`}>
         {theme === 'dark' ? (
-          <Moon className="theme-icon moon-icon" size={18} />
+          <>
+            <Moon className="theme-icon moon-icon" size={18} />
+            <span className="theme-toggle-text">{t('themeDark') || 'Tối'}</span>
+          </>
         ) : (
-          <Sun className="theme-icon sun-icon" size={18} />
+          <>
+            <Sun className="theme-icon sun-icon" size={18} />
+            <span className="theme-toggle-text">{t('themeLight') || 'Sáng'}</span>
+          </>
         )}
       </div>
     </button>

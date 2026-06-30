@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, RotateCw, HelpCircle, Award } from 'lucide-react
 import { useAuth } from '../context/AuthContext';
 import './FlashcardKit.css';
 
-export default function FlashcardKit({ segments, t, videoUrl }) {
+export default function FlashcardKit({ segments, t, videoUrl, lang }) {
   const { session } = useAuth();
   const [cards, setCards] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -18,7 +18,7 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
     const fetchCards = async () => {
       // Check cache first
       if (videoUrl) {
-        const cacheKey = `studymind_cache_flashcard_${videoUrl.toLowerCase()}`;
+        const cacheKey = `studymind_cache_flashcard_${lang}_${videoUrl.toLowerCase()}`;
         const cachedCardsStr = localStorage.getItem(cacheKey);
         if (cachedCardsStr) {
           try {
@@ -48,14 +48,20 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
         const durationMinutes = durationSeconds / 60;
         const numCards = Math.max(5, Math.min(10, Math.floor(5 + durationMinutes / 3)));
 
-        const queryPrompt = 
-          `Hãy tạo ra đúng ${numCards} thẻ flashcard học tập kiểm tra kiến thức của bài học này dưới dạng JSON. ` +
-          "Thẻ flashcard có hai mặt: mặt trước (front) chứa câu hỏi hoặc thuật ngữ, mặt sau (back) chứa câu trả lời hoặc định nghĩa chi tiết. " +
-          "Nội dung thẻ flashcard phải viết bằng tiếng Việt, các thuật ngữ kỹ thuật tiếng Anh gốc giữ nguyên. " +
-          "Đảm bảo ngữ nghĩa của câu được duy trì một cách hài hòa, không quá lẫn lộn tiếng Việt, tiếng Anh." +
-          "Trả về DUY NHẤT một mảng JSON hợp lệ chứa các đối tượng có cấu trúc chính xác như sau: " +
-          "[{\"front\": \"câu hỏi mặt trước\", \"back\": \"câu trả lời mặt sau\"}]. " +
-          "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô.";
+        const queryPrompt = lang === 'vi'
+          ? `Hãy tạo ra đúng ${numCards} thẻ flashcard học tập kiểm tra kiến thức của bài học này dưới dạng JSON. ` +
+            "Thẻ flashcard có hai mặt: mặt trước (front) chứa câu hỏi hoặc thuật ngữ, mặt sau (back) chứa câu trả lời hoặc định nghĩa chi tiết. " +
+            "Nội dung thẻ flashcard phải viết bằng tiếng Việt, các thuật ngữ kỹ thuật tiếng Anh gốc giữ nguyên. " +
+            "Đảm bảo ngữ nghĩa của câu được duy trì một cách hài hòa, không quá lẫn lộn tiếng Việt, tiếng Anh. " +
+            "Trả về DUY NHẤT một mảng JSON hợp lệ chứa các đối tượng có cấu trúc chính xác như sau: " +
+            "[{\"front\": \"câu hỏi mặt trước\", \"back\": \"câu trả lời mặt sau\"}]. " +
+            "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô."
+          : `Create exactly ${numCards} study flashcards testing the knowledge of this lesson in JSON format. ` +
+            "A flashcard has two sides: the front contains a question or term, and the back contains the detailed answer or definition. " +
+            "All content must be written in English. " +
+            "Return ONLY a valid JSON array containing objects with the exact structure: " +
+            "[{\"front\": \"front question\", \"back\": \"back answer\"}]. " +
+            "Do not include any intro/outro text, do not wrap in markdown code blocks, return only raw JSON string.";
 
         const response = await fetch('/api/chat/raw', {
           method: 'POST',
@@ -86,7 +92,7 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
           setCards(parsedCards);
           // Save to cache
           if (videoUrl) {
-            const cacheKey = `studymind_cache_flashcard_${videoUrl.toLowerCase()}`;
+            const cacheKey = `studymind_cache_flashcard_${lang}_${videoUrl.toLowerCase()}`;
             localStorage.setItem(cacheKey, JSON.stringify(parsedCards));
           }
         } else {
@@ -106,7 +112,24 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
       let generatedCards = [];
 
       if (text.includes("list") || text.includes("node") || text.includes("pointer")) {
-        generatedCards = [
+        generatedCards = lang === 'vi' ? [
+          {
+            front: "Linked List (Danh sách liên kết) là gì?",
+            back: "Một cấu trúc dữ liệu tuyến tính trong đó các phần tử (nút) được lưu trữ không liên tục. Mỗi nút trỏ đến nút tiếp theo bằng con trỏ."
+          },
+          {
+            front: "Một Nút (Node) trong Linked List gồm những thành phần nào?",
+            back: "Gồm hai phần: 1) Dữ liệu (chứa giá trị) và 2) Con trỏ tiếp theo (chứa địa chỉ của nút tiếp theo)."
+          },
+          {
+            front: "Độ phức tạp thời gian để chèn một nút ở đầu Linked List là bao nhiêu?",
+            back: "O(1) - Thời gian hằng số, vì chỉ cần đổi con trỏ của nút mới trỏ vào đầu hiện tại và cập nhật con trỏ đầu."
+          },
+          {
+            front: "Độ phức tạp thời gian để tìm kiếm một giá trị trong singly Linked List là bao nhiêu?",
+            back: "O(n) - Thời gian tuyến tính, vì bạn có thể phải duyệt qua toàn bộ danh sách từ đầu đến cuối để tìm giá trị."
+          }
+        ] : [
           {
             front: "What is a Linked List?",
             back: "A linear data structure where elements (nodes) are stored non-contiguously. Each node points to the next node using a pointer."
@@ -125,7 +148,24 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
           }
         ];
       } else if (text.includes("fastapi") || text.includes("framework") || text.includes("endpoint")) {
-        generatedCards = [
+        generatedCards = lang === 'vi' ? [
+          {
+            front: "FastAPI là gì?",
+            back: "Một web framework hiện đại, hiệu năng cao để xây dựng API với Python, dựa trên gợi ý kiểu (type hints) tiêu chuẩn."
+          },
+          {
+            front: "FastAPI sử dụng thư viện nào để kiểm định dữ liệu?",
+            back: "Pydantic. Nó thực thi kiểm định kiểu ở thời gian chạy và tạo ra thông báo lỗi cấu trúc chi tiết cho các yêu cầu không hợp lệ."
+          },
+          {
+            front: "Tại sao FastAPI lại có hiệu năng cao?",
+            back: "Nó được xây dựng trên Starlette (phần web) và Uvicorn (máy chủ ASGI), đồng thời hỗ trợ lập trình bất đồng bộ nguyên bản qua async/await."
+          },
+          {
+            front: "Decorator endpoint nào tạo ra tài nguyên mới trong REST?",
+            back: "@app.post() - Ánh xạ tới phương thức HTTP POST được dùng để gửi dữ liệu và tạo tài nguyên."
+          }
+        ] : [
           {
             front: "What is FastAPI?",
             back: "A modern, high-performance web framework for building APIs with Python, based on standard Python type hints."
@@ -144,7 +184,24 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
           }
         ];
       } else if (text.includes("gradient") || text.includes("loss") || text.includes("network") || text.includes("neural")) {
-        generatedCards = [
+        generatedCards = lang === 'vi' ? [
+          {
+            front: "Gradient Descent là gì?",
+            back: "Một thuật toán tối ưu hóa dùng để giảm thiểu hàm mất mát của mô hình bằng cách cập nhật lặp lại các tham số theo hướng giảm mạnh nhất."
+          },
+          {
+            front: "Hàm mất mát (Loss Function) là gì?",
+            back: "Một hàm toán học đánh giá mức độ mô hình hóa tập dữ liệu của thuật toán máy học bằng cách đo lường các dự đoán so với mục tiêu thực tế."
+          },
+          {
+            front: "Tỷ lệ học (Learning Rate) là gì?",
+            back: "Một siêu tham số trong gradient descent điều khiển kích thước bước thực hiện để đi về phía cực tiểu của hàm mất mát trong quá trình tối ưu."
+          },
+          {
+            front: "Lan truyền ngược (Backpropagation) là gì?",
+            back: "Một thuật toán huấn luyện mạng neural tính toán đạo hàm của hàm mất mát đối với trọng số bằng quy tắc chuỗi (chain rule), lan truyền sai số ngược từ đầu ra về đầu vào."
+          }
+        ] : [
           {
             front: "What is Gradient Descent?",
             back: "An optimization algorithm used to minimize a model's loss function by iteratively moving parameters in the direction of the steepest decrease."
@@ -163,8 +220,20 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
           }
         ];
       } else {
-        // Default general flashcards
-        generatedCards = [
+        generatedCards = lang === 'vi' ? [
+          {
+            front: "Lợi ích chính của Học chủ động (Active Learning) là gì?",
+            back: "Nó tăng cường hiểu biết và khả năng ghi nhớ bằng cách lôi cuốn người học tương tác với học liệu qua các hoạt động như trắc nghiệm và flashcards thay vì chỉ xem thụ động."
+          },
+          {
+            front: "Tính năng 'Bảo vệ Thuật ngữ Chuyên ngành' giúp ích gì cho người học?",
+            back: "Nó ngăn chặn các công cụ dịch thuật làm biến dạng thuật ngữ kỹ thuật (ví dụ: giữ nguyên 'Linked List' thay vì dịch thô thiển là 'Danh sách liên kết'), giúp giữ ngữ cảnh học tập."
+          },
+          {
+            front: "Đường ống RAG (RAG Pipeline) là gì?",
+            back: "Retrieval-Augmented Generation: Nó truy xuất các thông tin liên quan từ một cơ sở dữ liệu cục bộ (như transcript) để hướng dẫn LLM tạo câu trả lời chính xác, đáng tin cậy."
+          }
+        ] : [
           {
             front: "What is the primary benefit of Active Learning?",
             back: "It increases comprehension and memory retention by engaging learners in the material through tasks like quizzes and flashcards rather than passive watching."
@@ -186,7 +255,7 @@ export default function FlashcardKit({ segments, t, videoUrl }) {
     fetchCards();
     setCurrentIdx(0);
     setFlipped(false);
-  }, [segments, session, videoUrl]);
+  }, [segments, session, videoUrl, lang]);
 
   const handleNext = () => {
     if (currentIdx < cards.length - 1) {

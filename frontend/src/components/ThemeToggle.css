@@ -49,3 +49,7 @@
   color: #f59e0b;
   filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.4));
 }
+
+.theme-toggle-text {
+  display: none;
+}

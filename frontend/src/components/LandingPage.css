@@ -427,6 +427,42 @@
   .history-grid {
     grid-template-columns: 1fr;
   }
+  
+  /* Stack input form on mobile */
+  .input-wrapper {
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    gap: 16px !important;
+    padding: 16px !important;
+  }
+  
+  .yt-icon {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+  
+  .url-input {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    align-self: center;
+    font-size: 14px !important;
+  }
+  
+  .submit-btn {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+    width: 100%;
+    justify-content: center;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+    margin-top: 4px;
+  }
+
+  .input-hint {
+    margin-top: 8px !important;
+  }
 }
 
 /* Pagination Controls */
