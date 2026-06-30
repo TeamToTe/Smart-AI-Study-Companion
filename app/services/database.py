@@ -64,6 +64,23 @@ class DatabaseService:
                 
             raise Exception("Failed to get or create chat session in Supabase.")
 
+    async def get_user_sessions(self, user_token: str, user_id: str) -> List[Dict]:
+        """
+        Lấy danh sách toàn bộ chat sessions của người dùng.
+        """
+        headers = self._get_headers(user_token)
+        url = f"{self.supabase_url}/rest/v1/chat_sessions?user_id=eq.{user_id}"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=headers)
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    logger.error(f"Failed to fetch user sessions. Status: {response.status_code}, Body: {response.text}")
+            except Exception as e:
+                logger.error(f"Error fetching user sessions: {e}")
+            return []
+
     async def get_chat_history(self, user_token: str, session_id: str) -> List[Dict[str, str]]:
         """
         Lấy toàn bộ lịch sử tin nhắn của session_id, sắp xếp theo created_at ASC.

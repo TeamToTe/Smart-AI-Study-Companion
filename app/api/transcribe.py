@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
 from celery import chain
 from celery.result import AsyncResult
 
@@ -6,10 +7,34 @@ from app.core.celery_app import celery_app
 from app.tasks.transcription_tasks import get_transcript_task, orchestrate_translation_task
 from app.schemas.transcription import TranscriptionRequest, TranscriptionResponse
 from app.schemas.translation import TranslationResponse
-from app.services.transcription import TranscriptionService, get_transcription_service
+from app.services.transcription import TranscriptionService, get_transcription_service, validate_video_duration
 from app.services.gemini_transcript import GeminiTranscriptionService, get_gemini_transcription_service
 from app.services.translate import TranslateService, get_translate_service
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, security
+from app.services.database import DatabaseService
+
+async def validate_video_upload_limit(
+    video_url: str,
+    user_token: str,
+    user_id: str,
+    db_service: DatabaseService,
+) -> None:
+    try:
+        sessions = await db_service.get_user_sessions(user_token, user_id)
+        existing_urls = {s["video_url"].strip().lower() for s in sessions}
+        if video_url.strip().lower() not in existing_urls:
+            if len(existing_urls) >= 2:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Bạn đã đạt giới hạn 2 video. Trợ lý học tập chỉ hỗ trợ xử lý tối đa 2 video cho mỗi người dùng."
+                )
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to check video upload limit: {e}. Proceeding anyway...")
+        pass
 
 router = APIRouter(tags=["transcriptions"])
 
@@ -22,13 +47,24 @@ router = APIRouter(tags=["transcriptions"])
 )
 async def get_youtube_transcript(
     payload: TranscriptionRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     service: TranscriptionService = Depends(get_transcription_service),
+    db_service: DatabaseService = Depends(),
     user: dict = Depends(get_current_user),
 ) -> TranscriptionResponse:
     """
     Acquires subtitles/captions (manually uploaded or auto-generated)
     for a YouTube video in English or Vietnamese and parses them.
     """
+    user_id = user.get("sub")
+    if user_id:
+        await validate_video_upload_limit(
+            video_url=payload.url,
+            user_token=credentials.credentials,
+            user_id=user_id,
+            db_service=db_service,
+        )
+    await validate_video_duration(payload.url)
     return await service.get_youtube_transcript(payload.url)
 
 # @router.post(
@@ -71,13 +107,24 @@ async def get_youtube_transcript(
     summary="Asynchronously transcribe and translate YouTube video",
     description="Submits a YouTube video URL for background transcription and translation to Vietnamese.",
 )
-def start_async_transcription(
+async def start_async_transcription(
     payload: TranscriptionRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db_service: DatabaseService = Depends(),
     user: dict = Depends(get_current_user),
 ):
     """
     Submits a YouTube URL. Returns a task ID to poll for status, checking for cached responses first.
     """
+    user_id = user.get("sub")
+    if user_id:
+        await validate_video_upload_limit(
+            video_url=payload.url,
+            user_token=credentials.credentials,
+            user_id=user_id,
+            db_service=db_service,
+        )
+
     import os
     import re
     
@@ -117,6 +164,8 @@ def start_async_transcription(
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Error scanning storage for existing video: {e}")
+
+    await validate_video_duration(payload.url)
 
     import uuid
     orchestrate_task_id = str(uuid.uuid4())

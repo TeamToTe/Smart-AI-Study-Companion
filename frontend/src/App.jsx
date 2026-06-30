@@ -287,7 +287,19 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error(lang === 'vi' ? 'Yêu cầu phân tích video thất bại.' : 'Backend request failed.');
+        let errMessage = lang === 'vi' ? 'Yêu cầu phân tích video thất bại.' : 'Backend request failed.';
+        try {
+          const errData = await response.json();
+          if (errData && errData.detail) {
+            errMessage = errData.detail;
+          }
+        } catch (_) {
+          try {
+            const text = await response.text();
+            if (text) errMessage = text;
+          } catch (_) {}
+        }
+        throw new Error(errMessage);
       }
 
       const data = await response.json();

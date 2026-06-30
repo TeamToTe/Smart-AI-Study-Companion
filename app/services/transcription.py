@@ -1,5 +1,6 @@
 import logging
 import yt_dlp
+from typing import Optional
 
 from fastapi import HTTPException, status, Depends
 from fastapi.concurrency import run_in_threadpool
@@ -7,6 +8,31 @@ from app.schemas.transcription import TranscriptionResponse, TranscriptionSegmen
 from app.services.gemini_transcript import GeminiTranscriptionService, get_gemini_transcription_service
 
 logger = logging.getLogger(__name__)
+
+def _verify_video_duration(url: str) -> Optional[float]:
+    ydl_opts = {
+        "skip_download": True,
+        "quiet": True,
+        "js_runtimes": {"node": {}},
+        "remote_components": ["ejs:github"],
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        return info.get("duration")
+
+async def validate_video_duration(url: str) -> None:
+    try:
+        duration = await run_in_threadpool(_verify_video_duration, url)
+        if duration and duration > 3600:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Thời lượng video vượt quá 1 giờ. Trợ lý học tập chỉ hỗ trợ các video có độ dài tối đa là 1 giờ."
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Failed to check video duration for {url}: {e}. Proceeding anyway...")
+        pass
 
 def _get_transcript(url: str) -> dict:
     """

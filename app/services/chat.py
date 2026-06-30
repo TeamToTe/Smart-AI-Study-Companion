@@ -8,6 +8,9 @@ from app.services.database import DatabaseService
 
 logger = logging.getLogger(__name__)
 
+MAX_EXCHANGES_PER_SESSION = 5
+LIMIT_EXCEEDED_MESSAGE = "Xin lỗi, bạn đã đạt giới hạn 5 tin nhắn cho phiên này."
+
 class ChatService:
     async def get_chat_response(
         self, 
@@ -20,6 +23,11 @@ class ChatService:
         Sử dụng cơ chế xoay vòng API key (Key Rotation) để phân phối tải.
         Lưu trữ lịch sử hội thoại tự động vào database Supabase.
         """
+        # 1. Lấy lịch sử trò chuyện (chat history) từ database và kiểm tra giới hạn tin nhắn
+        history_messages = await db_service.get_chat_history(user_token, payload.session_id)
+        if len(history_messages) // 2 >= MAX_EXCHANGES_PER_SESSION:
+            return ChatResponse(response=LIMIT_EXCEEDED_MESSAGE)
+
         api_key = get_gemini_api_key()
         if not api_key:
             raise HTTPException(
@@ -29,7 +37,7 @@ class ChatService:
             
         client = genai.Client(api_key=api_key)
         
-        # 1. Định dạng toàn bộ phụ đề thành ngữ cảnh có chứa timestamp
+        # 2. Định dạng toàn bộ phụ đề thành ngữ cảnh có chứa timestamp
         transcript_context = ""
         for seg in payload.segments:
             m = int(seg.start // 60)
@@ -37,7 +45,7 @@ class ChatService:
             timestamp_str = f"[{m:02d}:{s:02d}]"
             transcript_context += f"{timestamp_str} {seg.text}\n"
 
-        # 2. Xây dựng System Instruction chỉ dẫn cho Gemini hoạt động như AI Tutor
+        # 3. Xây dựng System Instruction chỉ dẫn cho Gemini hoạt động như AI Tutor
         system_instruction = (
             "Bạn là một trợ lý học tập AI thông minh, đóng vai trò là Gia sư bài giảng kỹ thuật trực tuyến.\n"
             "Dưới đây là toàn bộ phụ đề bài giảng đã dịch sang tiếng Việt kèm mốc thời gian tương ứng:\n"
@@ -50,9 +58,6 @@ class ChatService:
             "4. Nếu học viên hỏi thông tin chung hoặc tóm tắt, hãy tóm tắt các ý chính kèm theo mốc thời gian bắt đầu của mỗi ý.\n"
             "5. Nếu học viên hỏi những câu hỏi ngoài lề không liên quan đến bài giảng, hãy lịch sự từ chối trả lời và hướng học viên tập trung vào nội dung bài học.\n"
         )
-
-        # 3. Lấy lịch sử trò chuyện (chat history) từ database
-        history_messages = await db_service.get_chat_history(user_token, payload.session_id)
 
         # 4. Chuẩn bị lịch sử trò chuyện (chat history) đồng bộ theo cấu trúc google-genai
         contents = []
