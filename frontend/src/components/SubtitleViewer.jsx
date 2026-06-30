@@ -10,6 +10,12 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Check if text is originally Vietnamese to avoid double Vietnamese subtitles
+function isVietnameseText(text) {
+  if (!text) return false;
+  return /[áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ]/.test(text);
+}
+
 // Eased smooth scroll that doesn't trigger Chromium window scroll bug
 function smoothScrollTo(element, target, duration = 250) {
   const start = element.scrollTop;
@@ -268,15 +274,23 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
                   <span>{formatTime(seg.start)}</span>
                 </button>
                 <div className="subtitle-content">
-                  {/* Original English Text (Entity-Protected) */}
-                  <p className="sub-text-en">
-                    {renderHighlightedText(seg.original_text || seg.text, seg.domain_words)}
-                  </p>
-                  {/* Vietnamese Context-aware Translation */}
-                  {lang === 'vi' && (
+                  {isVietnameseText(seg.original_text) ? (
                     <p className="sub-text-vi">
-                      {renderHighlightedText(seg.original_text ? seg.text : getMockTranslation(seg.text), seg.domain_words)}
+                      {renderHighlightedText(seg.text, seg.domain_words)}
                     </p>
+                  ) : (
+                    <>
+                      {/* Original English Text (Entity-Protected) */}
+                      <p className="sub-text-en">
+                        {renderHighlightedText(seg.original_text || seg.text, seg.domain_words)}
+                      </p>
+                      {/* Vietnamese Context-aware Translation */}
+                      {lang === 'vi' && (
+                        <p className="sub-text-vi">
+                          {renderHighlightedText(seg.original_text ? seg.text : getMockTranslation(seg.text), seg.domain_words)}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

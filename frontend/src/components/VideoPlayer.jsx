@@ -17,6 +17,12 @@ function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+// Check if text is originally Vietnamese to avoid double Vietnamese subtitles
+function isVietnameseText(text) {
+  if (!text) return false;
+  return /[áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ]/.test(text);
+}
+
 export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang, pauseTrigger }) {
   const { session } = useAuth();
   const [dynamicGlossary, setDynamicGlossary] = useState({});
@@ -442,13 +448,21 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
-          <p className="caption-en">
-            {renderHighlightedText(activeSegment.original_text || activeSegment.text, activeSegment.domain_words)}
-          </p>
-          {lang === 'vi' && (
+          {isVietnameseText(activeSegment.original_text) ? (
             <p className="caption-vi">
-              {renderHighlightedText(activeSegment.original_text ? activeSegment.text : getMockTranslationForOverlay(activeSegment.text), activeSegment.domain_words)}
+              {renderHighlightedText(activeSegment.text, activeSegment.domain_words)}
             </p>
+          ) : (
+            <>
+              <p className="caption-en">
+                {renderHighlightedText(activeSegment.original_text || activeSegment.text, activeSegment.domain_words)}
+              </p>
+              {lang === 'vi' && (
+                <p className="caption-vi">
+                  {renderHighlightedText(activeSegment.original_text ? activeSegment.text : getMockTranslationForOverlay(activeSegment.text), activeSegment.domain_words)}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
