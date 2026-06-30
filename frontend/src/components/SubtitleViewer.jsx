@@ -49,7 +49,14 @@ function smoothScrollTo(element, target, duration = 250) {
 export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc, onHoverDomainWord }) {
   const { session } = useAuth();
   const [activeIdx, setActiveIdx] = useState(-1);
-  const [autoScroll, setAutoScroll] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(() => {
+    const saved = localStorage.getItem('studymind_auto_scroll');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('studymind_auto_scroll', autoScroll);
+  }, [autoScroll]);
   const [hoveredTerm, setHoveredTerm] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [tooltipVisible, setTooltipVisible] = useState(false);

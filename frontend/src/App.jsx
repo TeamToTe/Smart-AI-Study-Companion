@@ -37,7 +37,10 @@ export default function App() {
   const [isProcessed, setIsProcessed] = useState(false);
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [videoOverlayCc, setVideoOverlayCc] = useState(true);
+  const [videoOverlayCc, setVideoOverlayCc] = useState(() => {
+    const saved = localStorage.getItem('studymind_video_overlay_cc');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [pauseTrigger, setPauseTrigger] = useState(0);
   
   // Auth state
@@ -84,6 +87,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('studymind_lang', lang);
   }, [lang]);
+
+  // Save videoOverlayCc preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('studymind_video_overlay_cc', videoOverlayCc);
+  }, [videoOverlayCc]);
 
   // Save active tab preference to sessionStorage
   useEffect(() => {
