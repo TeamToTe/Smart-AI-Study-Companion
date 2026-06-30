@@ -3,7 +3,7 @@ import { CheckCircle2, XCircle, RotateCcw, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './QuizKit.css';
 
-export default function QuizKit({ segments, t, videoUrl }) {
+export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
   const { session } = useAuth();
   const [questions, setQuestions] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -314,10 +314,25 @@ export default function QuizKit({ segments, t, videoUrl }) {
            scorePercent >= 50 ? "Good work. Review the glossary to improve your score!" : 
            "Keep studying and review the video timestamps to clarify concepts."}
         </p>
-        <button className="restart-btn btn-primary" onClick={handleRestart}>
+        <button className="restart-btn btn-primary" onClick={handleRestart} style={{ marginBottom: '16px' }}>
           <RotateCcw size={16} />
           <span>{t('tryAgain')}</span>
         </button>
+
+        <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '16px', width: '100%', textAlign: 'center' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: '1.4' }}>
+            {lang === 'vi' ? 'Bạn đã làm xong bài kiểm tra! Hãy đóng góp ý kiến khảo sát cho dự án nhé:' : 'You have completed the quiz! Please share your feedback to help our project:'}
+          </p>
+          <a 
+            href="https://docs.google.com/forms/d/e/1FAIpQLSccMyV6meG-NjsJYqjAls43GR9x6JmrZAAvHN-l8bc0Z0J1cA/viewform?usp=dialog" 
+            target="_blank" 
+            rel="noreferrer"
+            className="text-gradient"
+            style={{ fontWeight: 'bold', fontSize: '13px', textDecoration: 'none' }}
+          >
+            {t('feedbackSurvey')} &rarr;
+          </a>
+        </div>
       </div>
     );
   }
