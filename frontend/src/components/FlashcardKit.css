@@ -39,12 +39,14 @@
   backface-visibility: hidden; /* Hides the back side during rotation */
   border-radius: 16px;
   border: 1px solid var(--border-color);
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   box-shadow: var(--shadow-md);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-sizing: border-box; /* Ensure padding doesn't overflow */
+  overflow: hidden; /* Prevent text overflow outside card */
 }
 
 .card-front {
@@ -87,16 +89,20 @@
 }
 
 .card-text {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   text-align: center;
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.5;
   flex-grow: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 0;
+  padding: 8px 4px;
+  overflow-y: auto; /* Enable scrollbar inside the card when text is too long */
+  width: 100%;
+  max-height: 145px; /* Leave space for card-type and action-hint */
+  box-sizing: border-box;
 }
 
 .card-hint {

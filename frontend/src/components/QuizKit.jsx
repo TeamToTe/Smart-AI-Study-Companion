@@ -21,7 +21,7 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
     const fetchQuiz = async () => {
       // Check cache first
       if (videoUrl) {
-        const cacheKey = `studymind_cache_quiz_${videoUrl.toLowerCase()}`;
+        const cacheKey = `studymind_cache_quiz_${lang}_${videoUrl.toLowerCase()}`;
         const cachedQuizStr = localStorage.getItem(cacheKey);
         if (cachedQuizStr) {
           try {
@@ -48,13 +48,19 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
           headers['Authorization'] = `Bearer ${session.access_token}`;
         }
 
-        const queryPrompt = 
-          "Hãy tạo ra đúng 3 câu hỏi trắc nghiệm kiểm tra kiến thức của bài học này dưới dạng JSON. " +
-          "Câu hỏi, các lựa chọn và phần giải thích phải viết bằng tiếng Việt, các thuật ngữ kỹ thuật tiếng Anh gốc giữ nguyên. " +
-          "Trả về DUY NHẤT một mảng JSON hợp lệ chứa các đối tượng có cấu trúc chính xác như sau: " +
-          "[{\"question\": \"nội dung câu hỏi\", \"options\": [\"lựa chọn A\", \"lựa chọn B\", \"lựa chọn C\", \"lựa chọn D\"], \"correct\": 0, \"explanation\": \"giải thích chi tiết lý do lựa chọn này là đúng\"}]. " +
-          "Chú ý: correct phải là một số nguyên (từ 0 đến 3) đại diện cho chỉ mục của đáp án đúng. " +
-          "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô.";
+        const queryPrompt = lang === 'vi'
+          ? "Hãy tạo ra đúng 3 câu hỏi trắc nghiệm kiểm tra kiến thức của bài học này dưới dạng JSON. " +
+            "Câu hỏi, các lựa chọn và phần giải thích phải viết bằng tiếng Việt, các thuật ngữ kỹ thuật tiếng Anh gốc giữ nguyên. " +
+            "Trả về DUY NHẤT một mảng JSON hợp lệ chứa các đối tượng có cấu trúc chính xác như sau: " +
+            "[{\"question\": \"nội dung câu hỏi\", \"options\": [\"lựa chọn A\", \"lựa chọn B\", \"lựa chọn C\", \"lựa chọn D\"], \"correct\": 0, \"explanation\": \"giải thích chi tiết lý do lựa chọn này là đúng\"}]. " +
+            "Chú ý: correct phải là một số nguyên (từ 0 đến 3) đại diện cho chỉ mục của đáp án đúng. " +
+            "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô."
+          : "Create exactly 3 multiple-choice questions to test the knowledge of this lesson in JSON format. " +
+            "The questions, options, and explanations must be written in English. " +
+            "Return ONLY a valid JSON array containing objects with the exact structure: " +
+            "[{\"question\": \"question content\", \"options\": [\"option A\", \"option B\", \"option C\", \"option D\"], \"correct\": 0, \"explanation\": \"detailed explanation of why this option is correct\"}]. " +
+            "Note: correct must be an integer (from 0 to 3) representing the index of the correct option. " +
+            "Do not include any intro/outro text, do not wrap in markdown code blocks, return only raw JSON string.";
 
         const response = await fetch('/api/chat', {
           method: 'POST',
@@ -81,21 +87,21 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
         }
         cleanedJson = cleanedJson.trim();
 
-        const parsedQuizzes = JSON.parse(cleanedJson);
-        if (Array.isArray(parsedQuizzes) && parsedQuizzes.length > 0) {
-          setQuestions(parsedQuizzes);
-          setSelectedAnswers(new Array(parsedQuizzes.length).fill(null));
-          setSubmittedStates(new Array(parsedQuizzes.length).fill(false));
+        const parsedQuiz = JSON.parse(cleanedJson);
+        if (Array.isArray(parsedQuiz) && parsedQuiz.length > 0) {
+          setQuestions(parsedQuiz);
+          setSelectedAnswers(new Array(parsedQuiz.length).fill(null));
+          setSubmittedStates(new Array(parsedQuiz.length).fill(false));
           // Save to cache
           if (videoUrl) {
-            const cacheKey = `studymind_cache_quiz_${videoUrl.toLowerCase()}`;
-            localStorage.setItem(cacheKey, JSON.stringify(parsedQuizzes));
+            const cacheKey = `studymind_cache_quiz_${lang}_${videoUrl.toLowerCase()}`;
+            localStorage.setItem(cacheKey, JSON.stringify(parsedQuiz));
           }
         } else {
           throw new Error('Invalid quiz format received.');
         }
       } catch (err) {
-        console.warn("Failed to generate dynamic quiz, falling back to local quiz database:", err);
+        console.warn("Failed to generate dynamic quiz, falling back to offline quiz database:", err);
         setError(err.message || 'Failed to generate quiz.');
         fallbackOfflineQuiz();
       } finally {
@@ -108,7 +114,41 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
       let generatedQuizzes = [];
 
       if (text.includes("list") || text.includes("node") || text.includes("pointer")) {
-        generatedQuizzes = [
+        generatedQuizzes = lang === 'vi' ? [
+          {
+            question: "Điều nào sau đây là đúng về Linked List (Danh sách liên kết) so với Array (Mảng)?",
+            options: [
+              "Linked List có thời gian truy cập ngẫu nhiên là O(1)",
+              "Các phần tử Linked List được lưu trữ liên tục trong bộ nhớ",
+              "Linked List có thể dễ dàng co giãn kích thước động",
+              "Linked List luôn tiêu tốn ít bộ nhớ hơn Array"
+            ],
+            correct: 2,
+            explanation: "Linked List có thể dễ dàng chèn/xóa các phần tử và thay đổi kích thước động mà không tốn chi phí tái cấp phát bộ nhớ như Array."
+          },
+          {
+            question: "Độ phức tạp thời gian để chèn một phần tử mới vào đầu một singly Linked List là bao nhiêu?",
+            options: [
+              "O(1)",
+              "O(log n)",
+              "O(n)",
+              "O(n log n)"
+            ],
+            correct: 0,
+            explanation: "Chèn ở đầu danh sách chỉ yêu cầu tạo nút mới, trỏ con trỏ của nó vào đầu hiện tại và cập nhật con trỏ đầu. Việc này tốn thời gian hằng số O(1)."
+          },
+          {
+            question: "Nếu một nút trong singly Linked List bị xóa, thành phần nào phải được cập nhật?",
+            options: [
+              "Trường dữ liệu của nút bị xóa",
+              "Con trỏ next của nút đứng trước nó",
+              "Chỉ cập nhật con trỏ tail",
+              "Không có con trỏ nào cần cập nhật"
+            ],
+            correct: 1,
+            explanation: "Để bỏ qua nút bị xóa, con trỏ next của nút đứng trước nó phải được cập nhật để trỏ trực tiếp đến nút tiếp theo của nút bị xóa."
+          }
+        ] : [
           {
             question: "Which of the following is true about Linked Lists compared to Arrays?",
             options: [
@@ -144,7 +184,41 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
           }
         ];
       } else if (text.includes("fastapi") || text.includes("framework") || text.includes("endpoint")) {
-        generatedQuizzes = [
+        generatedQuizzes = lang === 'vi' ? [
+          {
+            question: "Thư viện nào được FastAPI sử dụng để phân tích và kiểm định dữ liệu?",
+            options: [
+              "Flask",
+              "Pydantic",
+              "SQLAlchemy",
+              "Django"
+            ],
+            correct: 1,
+            explanation: "FastAPI phụ thuộc vào các mô hình Pydantic để kiểm định yêu cầu đầu vào, tuần tự hóa phản hồi đầu ra và tự động tạo tài liệu trong OpenAPI."
+          },
+          {
+            question: "FastAPI đạt được hiệu năng bất đồng bộ bằng cách nào?",
+            options: [
+              "Bằng cách sử dụng đa luồng (multi-threading) cho các tác vụ CPU",
+              "Bằng cách biên dịch Python thành mã C",
+              "Bằng cách tận dụng Starlette và máy chủ ASGI Uvicorn",
+              "Bằng cách tắt hỗ trợ HTTP/2"
+            ],
+            correct: 2,
+            explanation: "FastAPI được xây dựng trên Starlette (bộ công cụ ASGI gọn nhẹ) và chạy trên Uvicorn, cho phép nó xử lý hiệu quả các yêu cầu bất đồng bộ đồng thời."
+          },
+          {
+            question: "Phương thức HTTP nào nên được dùng để tạo một tài nguyên mới trên endpoint FastAPI?",
+            options: [
+              "GET",
+              "POST",
+              "PUT",
+              "DELETE"
+            ],
+            correct: 1,
+            explanation: "Theo các nguyên tắc RESTful, phương thức POST được sử dụng để gửi dữ liệu thực thể nhằm tạo ra các tài nguyên mới trên máy chủ."
+          }
+        ] : [
           {
             question: "Which library is used by FastAPI for data parsing and validation?",
             options: [
@@ -180,7 +254,41 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
           }
         ];
       } else if (text.includes("gradient") || text.includes("loss") || text.includes("network") || text.includes("neural")) {
-        generatedQuizzes = [
+        generatedQuizzes = lang === 'vi' ? [
+          {
+            question: "Vai trò chính của Hàm mất mát (Loss Function) trong việc huấn luyện mô hình máy học là gì?",
+            options: [
+              "Tăng tốc độ của các epoch huấn luyện",
+              "Đo lường sai số giữa dự đoán của mô hình và nhãn thực tế",
+              "Khởi tạo ngẫu nhiên ma trận trọng số",
+              "Chuẩn hóa các biến mục tiêu"
+            ],
+            correct: 1,
+            explanation: "Hàm mất mát tính toán một giá trị vô hướng đại diện cho sai số dự đoán của mô hình. Bộ tối ưu hóa sẽ làm việc để giảm thiểu giá trị này."
+          },
+          {
+            question: "Siêu tham số nào quyết định kích thước bước đi trong thuật toán Gradient Descent?",
+            options: [
+              "Batch size",
+              "Tỷ lệ học (Learning rate)",
+              "Number of layers",
+              "Dropout rate"
+            ],
+            correct: 1,
+            explanation: "Tỷ lệ học đóng vai trò là hệ số nhân trên gradient vector, kiểm soát độ lớn của bước cập nhật trọng số về phía điểm cực tiểu."
+          },
+          {
+            question: "Điều gì xảy ra nếu tỷ lệ học (learning rate) trong Gradient Descent quá lớn?",
+            options: [
+              "Mô hình mất quá nhiều thời gian để huấn luyện",
+              "Trọng số của mô hình bị đóng băng",
+              "Quá trình tối ưu hóa có thể vượt quá điểm cực tiểu và phân kỳ",
+              "Các gradient tự động trở về 0"
+            ],
+            correct: 2,
+            explanation: "Tỷ lệ học quá cao làm cho cập nhật tham số đi quá xa, có thể nhảy qua thung lũng cực tiểu và làm mô hình không thể hội tụ."
+          }
+        ] : [
           {
             question: "What is the primary role of a Loss Function in training machine learning models?",
             options: [
@@ -206,7 +314,7 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
           {
             question: "What happens if the learning rate in Gradient Descent is too large?",
             options: [
-              "The model takes too long to train",
+              "To speed up training epochs",
               "The model weights will freeze",
               "The optimization may overshoot the minimum and diverge",
               "The gradient values will automatically become zero"
@@ -216,8 +324,30 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
           }
         ];
       } else {
-        // Default quizzes
-        generatedQuizzes = [
+        generatedQuizzes = lang === 'vi' ? [
+          {
+            question: "Mục đích chính của bộ lọc 'Bảo vệ Thuật ngữ Chuyên ngành' là gì?",
+            options: [
+              "Ngăn chặn truy cập vào các trang web trái phép",
+              "Ngăn chặn việc dịch nghĩa thô các thuật ngữ kỹ thuật cốt lõi",
+              "Mã hóa đường dẫn truyền phát video",
+              "Kiểm tra hồ sơ định danh của học sinh"
+            ],
+            correct: 1,
+            explanation: "Việc dịch trực tiếp các thuật ngữ như 'Linked List' thành 'Danh sách liên kết' có thể làm mất đi ngữ cảnh học thuật chuẩn. Bộ lọc này giữ nguyên các thuật ngữ bằng tiếng Anh."
+          },
+          {
+            question: "Thanh bên Trợ lý AI (AI Tutor) truy xuất ngữ cảnh về video bằng cách nào?",
+            options: [
+              "Bằng cách tìm kiếm các bài học tương tự trên web",
+              "Bằng cách tìm kiếm ngữ nghĩa (RAG) trên transcript của video",
+              "Bằng cách phân tích lịch sử duyệt web của người dùng",
+              "Bằng cách quét phần bình luận của video"
+            ],
+            correct: 1,
+            explanation: "Chatbot truy vấn một Vector Database lưu trữ các phân đoạn transcript được chia nhỏ, giúp nó trích xuất chính xác các mốc thời gian khớp với câu hỏi của người dùng."
+          }
+        ] : [
           {
             question: "What is the main purpose of the 'Academic Entity Protection' filter?",
             options: [
@@ -252,7 +382,7 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
     setCurrentIdx(0);
     setScore(0);
     setShowResult(false);
-  }, [segments, session, videoUrl]);
+  }, [segments, session, videoUrl, lang]);
 
   const handleSelectOption = (idx) => {
     if (submittedStates[currentIdx]) return;
