@@ -7,16 +7,16 @@ Dự án StudyMind (Smart AI Study Companion) là một ứng dụng học tập
 ---
 
 ## MỤC LỤC
-1. [Tính Năng Cốt Lõi](#tính-năng-cốt-lõi)
-2. [Kiến Trúc & Quy Trình Xử Lý](#kiến-trúc--quy-trình-xử-lý)
-3. [Hướng Dẫn Triển Khai Nhanh với Docker](#hướng-dẫn-triển-khai-nhanh-với-docker)
-4. [Hướng Dẫn Cài Đặt Thủ Công (Local Setup)](#hướng-dẫn-cài-đặt-thủ-công-local-setup)
-5. [Lược Đồ Cơ Sở Dữ Liệu (Supabase SQL)](#lược-đồ-cơ-sở-dữ-liệu-supabase-sql)
-6. [Danh Sách Các Endpoint API Chính](#danh-sách-các-endpoint-api-chính)
+1. [🌟 Tính Năng Cốt Lõi](#-tính-năng-cốt-lõi)
+2. [⚙️ Kiến Trúc & Quy Trình Xử Lý](#-kiến-trúc--quy-trình-xử-lý)
+3. [🚀 Hướng Dẫn Triển Khai Nhanh với Docker](#-hướng-dẫn-triển-khai-nhanh-với-docker)
+4. [🛠️ Hướng Dẫn Cài Đặt Thủ Công (Local Setup)](#-hướng-dẫn-cài-đặt-thủ-công-local-setup)
+5. [🗄️ Lược Đồ Cơ Sở Dữ Liệu (Supabase SQL)](#-lược-đồ-cơ-sở-dữ-liệu-supabase-sql)
+6. [📡 Danh Sách Các Endpoint API Chính](#-danh-sách-các-endpoint-api-chính)
 
 ---
 
-## TÍNH NĂNG CỐT LÕI
+## 🌟 TÍNH NĂNG CỐT LÕI
 
 ### 1. Trình Học Video Tương Tác (Interactive Workspace)
 * **Phụ đề thông minh:** Hỗ trợ phụ đề đơn ngữ tiếng Việt (chứa thuật ngữ kỹ thuật được highlight) hoặc song ngữ Anh - Việt. Hệ thống tự động đồng bộ hóa thời gian phát khớp với video (bao gồm độ trễ offset 400ms để tối ưu hiển thị).
@@ -43,7 +43,7 @@ Dự án StudyMind (Smart AI Study Companion) là một ứng dụng học tập
 
 ---
 
-## KIẾN TRÚC & QUY TRÌNH XỬ LÝ
+## ⚙️ KIẾN TRÚC & QUY TRÌNH XỬ LÝ
 
 ### 1. Quy Trình Trích Xuất & Dịch Phụ Đề (Celery Tasks Pipeline)
 Khi người dùng dán đường link YouTube vào hệ thống:
@@ -61,7 +61,7 @@ Khi người dùng dán đường link YouTube vào hệ thống:
 
 ---
 
-## HƯỚNG DẪN TRIỂN KHAI NHANH VỚI DOCKER
+## 🚀 HƯỚNG DẪN TRIỂN KHAI NHANH VỚI DOCKER
 
 ### 1. Cấu Hình Tệp Tin Môi Trường (.env)
 Hãy tạo một file `.env` tại thư mục gốc của dự án với nội dung như sau:
@@ -96,7 +96,7 @@ Hệ thống sẽ chạy tại địa chỉ:
 
 ---
 
-## HƯỚNG DẪN CÀI ĐẶT THỦ CÔNG (LOCAL SETUP)
+## 🛠️ HƯỚNG DẪN CÀI ĐẶT THỦ CÔNG (LOCAL SETUP)
 
 Nếu bạn không muốn chạy qua Docker, hãy thực hiện cài đặt trực tiếp trên hệ điều hành vật lý:
 
@@ -124,7 +124,7 @@ npm run setup
 
 ---
 
-## LƯỢC ĐỒ CƠ SỞ DỮ LIỆU (SUPABASE SQL)
+## 🗄️ LƯỢC ĐỒ CƠ SỞ DỮ LIỆU (SUPABASE SQL)
 
 Để lưu trữ lịch sử học tập và từ điển kỹ thuật, hãy tạo các bảng sau trong phần **SQL Editor** của Supabase Dashboard:
 
@@ -186,7 +186,7 @@ CREATE POLICY "Allow authenticated users to insert glossary definitions" ON publ
 
 ---
 
-## DANH SÁCH CÁC ENDPOINT API CHÍNH
+## 📡 DANH SÁCH CÁC ENDPOINT API CHÍNH
 
 * **`POST /api/transcriptions`**: Trích xuất transcript từ video YouTube (Tự động tải phụ đề có sẵn hoặc kích hoạt Gemini Speech-to-Text).
 * **`POST /api/transcriptions/translate`**: Dịch danh sách các câu sang tiếng Việt (giữ nguyên thuật ngữ chuyên ngành tiếng Anh).

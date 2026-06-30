@@ -7,16 +7,16 @@ StudyMind (Smart AI Study Companion) is an AI-powered educational application de
 ---
 
 ## TABLE OF CONTENTS
-1. [Core Features](#core-features)
-2. [System Architecture](#system-architecture)
-3. [Quick Start with Docker](#quick-start-with-docker)
-4. [Manual Local Installation](#manual-local-installation)
-5. [Supabase Database Schema](#supabase-database-schema)
-6. [Key API Endpoints](#key-api-endpoints)
+1. [🌟 Core Features](#-core-features)
+2. [⚙️ System Architecture](#-system-architecture)
+3. [🚀 Quick Start with Docker](#-quick-start-with-docker)
+4. [🛠️ Manual Local Installation](#-manual-local-installation)
+5. [🗄️ Supabase Database Schema](#-supabase-database-schema)
+6. [📡 Key API Endpoints](#-key-api-endpoints)
 
 ---
 
-## CORE FEATURES
+## 🌟 CORE FEATURES
 
 ### 1. Interactive Video Workspace
 * **Smart Subtitles:** Renders English-Vietnamese bilingual captions or single-line Vietnamese translations with English technical highlights. Captions are synchronized with video playback (includes a 400ms lag-offset compensation).
@@ -43,7 +43,7 @@ StudyMind (Smart AI Study Companion) is an AI-powered educational application de
 
 ---
 
-## SYSTEM ARCHITECTURE
+## ⚙️ SYSTEM ARCHITECTURE
 
 ### 1. Asynchronous Celery Tasks Pipeline
 When a YouTube link is submitted:
@@ -61,7 +61,7 @@ When a YouTube link is submitted:
 
 ---
 
-## QUICK START WITH DOCKER
+## 🚀 QUICK START WITH DOCKER
 
 ### 1. Environment Variables Configuration (.env)
 Create a `.env` file in the root directory:
@@ -92,7 +92,7 @@ SUPABASE_JWT="your-supabase-jwt-secret"
 
 ---
 
-## MANUAL LOCAL INSTALLATION
+## 🛠️ MANUAL LOCAL INSTALLATION
 
 ### 1. Prerequisites
 * Node.js v18+.
@@ -117,7 +117,7 @@ npm run setup
 
 ---
 
-## SUPABASE DATABASE SCHEMA
+## 🗄️ SUPABASE DATABASE SCHEMA
 
 Run the database setup script in the **SQL Editor** of your Supabase Dashboard:
 
@@ -174,7 +174,7 @@ CREATE POLICY "Allow authenticated users to insert glossary definitions" ON publ
 
 ---
 
-## KEY API ENDPOINTS
+## 📡 KEY API ENDPOINTS
 
 * **`POST /api/transcriptions`**: Fetches YouTube transcript (Subtitles or Gemini audio-to-text).
 * **`POST /api/transcriptions/translate`**: Translates segment array to Vietnamese, keeping technical keywords in English.
