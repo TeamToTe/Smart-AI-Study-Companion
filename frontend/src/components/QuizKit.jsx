@@ -62,13 +62,12 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
             "Note: correct must be an integer (from 0 to 3) representing the index of the correct option. " +
             "Do not include any intro/outro text, do not wrap in markdown code blocks, return only raw JSON string.";
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/chat/raw', {
           method: 'POST',
           headers,
           body: JSON.stringify({
             query: queryPrompt,
-            segments: segments.map(s => ({ start: s.start, end: s.end, text: s.text })),
-            history: []
+            segments: segments.map(s => ({ start: s.start, end: s.end, text: s.text }))
           })
         });
 
