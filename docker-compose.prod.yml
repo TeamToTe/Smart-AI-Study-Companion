@@ -26,6 +26,8 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - ANON_KEY=${ANON_KEY}
       - SUPABASE_JWT=${SUPABASE_JWT}
+    volumes:
+      - transcription_storage:/app/app/storage
     depends_on:
       - redis
     restart: always
@@ -46,6 +48,8 @@ services:
       - SUPABASE_URL=${SUPABASE_URL}
       - ANON_KEY=${ANON_KEY}
       - SUPABASE_JWT=${SUPABASE_JWT}
+    volumes:
+      - transcription_storage:/app/app/storage
     depends_on:
       - redis
     restart: always
@@ -63,3 +67,7 @@ services:
     depends_on:
       - web
     restart: always
+
+volumes:
+  transcription_storage:
+    name: transcription_storage
