@@ -154,7 +154,14 @@ class GeminiTranscriptionService:
             max_tries = 3
             response = None
             last_exception = None
-            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"]
+            models = [
+                "gemini-2.5-flash", 
+                "gemini-2.5-flash-lite", 
+                "gemini-3.1-flash-lite", 
+                "gemini-2.0-flash", 
+                "gemini-1.5-flash", 
+                "gemini-1.5-flash-8b"
+            ]
             
             for attempt in range(max_tries):
                 success = False
