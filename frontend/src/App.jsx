@@ -221,40 +221,47 @@ export default function App() {
 
   // 5. Handle Video Submission & API calls
   const handleUrlSubmit = async (submittedUrl) => {
+    // Sanitize YouTube URL (e.g., extract video ID and strip playlist or time parameters)
+    let urlToProcess = submittedUrl;
+    let videoId = "ID";
+    const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]{11}).*/;
+    const match = submittedUrl.match(reg);
+    if (match && match[2] && match[2].length === 11) {
+      videoId = match[2];
+      urlToProcess = `https://www.youtube.com/watch?v=${videoId}`;
+    }
+
     if (!user) {
       setAuthModalMode('signin');
       setIsAuthModalOpen(true);
       return;
     }
     // Run Rate Limiting check
-    if (!checkRateLimit(submittedUrl)) {
+    if (!checkRateLimit(urlToProcess)) {
       return;
     }
 
     // Check frontend localStorage cache first
-    const cachedSegmentsStr = localStorage.getItem(`studymind_cache_segments_${submittedUrl.toLowerCase()}`);
+    const cachedSegmentsStr = localStorage.getItem(`studymind_cache_segments_${urlToProcess.toLowerCase()}`);
     if (cachedSegmentsStr) {
       try {
         const cachedSegments = JSON.parse(cachedSegmentsStr);
         if (cachedSegments && cachedSegments.length > 0) {
-          const matchedExample = EXAMPLES.find(ex => ex.url.toLowerCase() === submittedUrl.toLowerCase());
+          const matchedExample = EXAMPLES.find(ex => ex.url.toLowerCase() === urlToProcess.toLowerCase());
           let videoTitle = "Video Lecture";
           if (matchedExample) {
             videoTitle = matchedExample.title;
           } else {
-            const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = submittedUrl.match(reg);
-            const videoId = match ? match[2] : "ID";
             videoTitle = `Lecture Video [${videoId}]`;
           }
 
-          setUrl(submittedUrl);
+          setUrl(urlToProcess);
           setSegments(cachedSegments);
           setLoading(false);
           setIsProcessed(true);
-          window.history.pushState({}, '', `/video?v=${encodeURIComponent(submittedUrl)}`);
+          window.history.pushState({}, '', `/video?v=${encodeURIComponent(urlToProcess)}`);
           setCurrentPath('/video');
-          addToHistory(submittedUrl, videoTitle);
+          addToHistory(urlToProcess, videoTitle);
           return;
         }
       } catch (e) {
@@ -262,7 +269,7 @@ export default function App() {
       }
     }
 
-    setUrl(submittedUrl);
+    setUrl(urlToProcess);
     setLoading(true);
     setIsProcessed(false);
     setPendingWorkspaceData(null);
@@ -272,8 +279,8 @@ export default function App() {
     // Redirect to /video immediately so user sees the progress screen from 0%
     const searchParams = new URLSearchParams(window.location.search);
     const currentV = searchParams.get('v');
-    if (window.location.pathname !== '/video' || currentV !== submittedUrl) {
-      window.history.pushState({}, '', `/video?v=${encodeURIComponent(submittedUrl)}`);
+    if (window.location.pathname !== '/video' || currentV !== urlToProcess) {
+      window.history.pushState({}, '', `/video?v=${encodeURIComponent(urlToProcess)}`);
     }
     setCurrentPath('/video');
 
@@ -281,14 +288,10 @@ export default function App() {
     let videoTitle = "Video Lecture";
 
     // Set custom titles based on example URLs
-    const matchedExample = EXAMPLES.find(ex => ex.url.toLowerCase() === submittedUrl.toLowerCase());
+    const matchedExample = EXAMPLES.find(ex => ex.url.toLowerCase() === urlToProcess.toLowerCase());
     if (matchedExample) {
       videoTitle = matchedExample.title;
     } else {
-      // Get short identifier for custom URL
-      const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = submittedUrl.match(reg);
-      const videoId = match ? match[2] : "ID";
       videoTitle = `Lecture Video [${videoId}]`;
     }
 
@@ -303,7 +306,7 @@ export default function App() {
       const response = await fetch('/api/transcriptions/async', {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ url: submittedUrl })
+        body: JSON.stringify({ url: urlToProcess })
       });
 
       if (!response.ok) {
@@ -377,7 +380,7 @@ export default function App() {
         setIsProcessed(true);
         setProgress(100);
         setPendingWorkspaceData({
-          url: submittedUrl,
+          url: urlToProcess,
           title: videoTitle,
           segments: fetchedSegments
         });
