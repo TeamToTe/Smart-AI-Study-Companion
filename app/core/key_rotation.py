@@ -22,6 +22,23 @@ def get_gemini_api_key() -> str:
     # Fallback to single key
     return os.getenv("GEMINI_API_KEY", "")
 
+def get_all_gemini_api_keys() -> list[str]:
+    """
+    Returns a list of all configured Gemini API keys, shuffled randomly.
+    """
+    keys_str = os.getenv("GEMINI_API_KEYS")
+    keys = []
+    if keys_str:
+        keys = [k.strip() for k in keys_str.split(",") if k.strip()]
+    
+    single_key = os.getenv("GEMINI_API_KEY", "")
+    if single_key and single_key not in keys:
+        keys.append(single_key)
+        
+    # Shuffle to distribute load randomly
+    random.shuffle(keys)
+    return keys
+
 def get_groq_api_key() -> str:
     """
     Returns a Groq API key.

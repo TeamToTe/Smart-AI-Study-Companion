@@ -73,18 +73,15 @@ class GeminiTranscriptionService:
         Transcribes a YouTube video by downloading its audio and sending it to Gemini Speech-to-Text.
         Uses the official google-genai SDK, featuring retries and fallback to Gemini 2.5 Flash Lite.
         """
-        from app.core.key_rotation import get_gemini_api_key
-        api_key = get_gemini_api_key()
-        if not api_key:
+        from app.core.key_rotation import get_all_gemini_api_keys
+        api_keys = get_all_gemini_api_keys()
+        if not api_keys:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Gemini API Key is not configured on the server. Please set GEMINI_API_KEY or GEMINI_API_KEYS in the environment."
             )
             
         local_file_path = None
-        uploaded_file = None
-        client = genai.Client(api_key=api_key)
-        
         try:
             # Step 1: Download audio format from YouTube (runs blocking call in thread pool)
             try:
@@ -102,8 +99,6 @@ class GeminiTranscriptionService:
                     detail=f"An unexpected error occurred during audio extraction: {str(e)}"
                 )
                 
-            # Step 2: Upload and transcribe audio using Google GenAI SDK
-            # Upload the local audio file to the Gemini Files API
             # Determine mime type based on file extension
             import mimetypes
             mimetypes.init()
@@ -125,79 +120,115 @@ class GeminiTranscriptionService:
             if not mime_type:
                 mime_type = 'audio/mp4' # Safe default for audio formats
                 
-            try:
-                uploaded_file = await client.aio.files.upload(
-                    file=local_file_path,
-                    config=types.UploadFileConfig(mime_type=mime_type)
-                )
-                logger.info(f"Successfully uploaded audio file to Gemini Files API: {uploaded_file.name} with mime type {mime_type}")
-            except Exception as e:
-                logger.error(f"Failed to upload audio file to Gemini Files API: {e}")
-                raise HTTPException(
-                    status_code=500,  # Map to gateway upload failure
-                    detail=f"Failed to upload audio file to Gemini API: {str(e)}"
-                )
-
             config = types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=TranscriptionResponse,
                 temperature=0.0,  # Zero temperature for deterministic/accurate transcription
             )
             
-            contents = [
-                uploaded_file,
-                "Please transcribe the entire audio file verbatim. For each spoken phrase, provide the exact start and end timestamps in seconds (as floats, e.g. 12.34). Keep segments short (around 5 to 10 seconds each). Ensure the timestamps match the actual audio timeline precisely and do not drift or accumulate errors as time progresses."
-            ]
-            
-            # Run the primary-then-fallback pipeline up to 3 times total
-            delays = [5.0, 10.0]
-            max_tries = 3
+            # Step 2: Upload and transcribe audio using Google GenAI SDK (with key rotation fallback)
             response = None
             last_exception = None
-            models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite"]
+            models = [
+                "gemini-3.5-flash",
+                "gemini-3.1-flash-lite",
+                "gemini-3-flash",
+                "gemini-2.5-flash-lite",
+                "gemini-2.5-flash"
+            ]
             
-            for attempt in range(max_tries):
-                success = False
-                for idx, model_name in enumerate(models):
-                    try:
-                        if idx > 0:
-                            logger.warning(
-                                f"Pipeline attempt {attempt + 1}: Model {models[idx-1]} failed. "
-                                f"Falling back immediately to {model_name}..."
-                            )
-                        logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying model {model_name}...")
-                        response = await _generate_content_single_call(
-                            aclient=client.aio,
-                            model=model_name,
-                            contents=contents,
-                            config=config
-                        )
-                        success = True
-                        break  # Success on this model!
-                    except Exception as err:
-                        last_exception = err
-                        logger.warning(
-                            f"Pipeline attempt {attempt + 1}: Model {model_name} failed: {err}"
-                        )
+            for k_idx, api_key in enumerate(api_keys):
+                masked = api_key[:6] + "..." + api_key[-4:] if len(api_key) > 10 else "..."
+                logger.info(f"Attempting transcription upload/generation with Gemini API Key #{k_idx+1}/{len(api_keys)}: {masked}")
+                client = genai.Client(api_key=api_key)
+                uploaded_file = None
+                key_error_triggered = False
                 
-                if success:
+                try:
+                    uploaded_file = await client.aio.files.upload(
+                        file=local_file_path,
+                        config=types.UploadFileConfig(mime_type=mime_type)
+                    )
+                    logger.info(f"Successfully uploaded audio file to Gemini Files API: {uploaded_file.name} with mime type {mime_type}")
+                    
+                    contents = [
+                        uploaded_file,
+                        "Please transcribe the entire audio file verbatim. For each spoken phrase, provide the exact start and end timestamps in seconds (as floats, e.g. 12.34). Keep segments short (around 5 to 10 seconds each). Ensure the timestamps match the actual audio timeline precisely and do not drift or accumulate errors as time progresses."
+                    ]
+                    
+                    # Run the primary-then-fallback pipeline up to 3 times total on this client
+                    delays = [5.0, 10.0]
+                    max_tries = 3
+                    
+                    for attempt in range(max_tries):
+                        success = False
+                        for idx, model_name in enumerate(models):
+                            try:
+                                if idx > 0:
+                                    logger.warning(
+                                        f"Pipeline attempt {attempt + 1}: Model {models[idx-1]} failed. "
+                                        f"Falling back immediately to {model_name}..."
+                                    )
+                                logger.info(f"Pipeline attempt {attempt + 1} of {max_tries}: Trying model {model_name}...")
+                                response = await _generate_content_single_call(
+                                    aclient=client.aio,
+                                    model=model_name,
+                                    contents=contents,
+                                    config=config
+                                )
+                                success = True
+                                break  # Success on this model!
+                            except Exception as err:
+                                last_exception = err
+                                logger.warning(
+                                    f"Pipeline attempt {attempt + 1}: Model {model_name} failed: {err}"
+                                )
+                                err_msg = str(err).lower()
+                                if any(x in err_msg for x in ["429", "exhausted", "quota", "limit", "key", "invalid", "401", "403"]):
+                                    key_error_triggered = True
+                                    break
+                        
+                        if success or key_error_triggered:
+                            break
+                            
+                        if attempt < max_tries - 1:
+                            delay = delays[attempt]
+                            logger.info(f"Waiting {delay} seconds before retrying the transcription pipeline...")
+                            await asyncio.sleep(delay)
+                            
+                except Exception as upload_err:
+                    last_exception = upload_err
+                    logger.error(f"Failed during upload or content generation with key {masked}: {upload_err}")
+                    err_msg = str(upload_err).lower()
+                    if any(x in err_msg for x in ["429", "exhausted", "quota", "limit", "key", "invalid", "401", "403"]):
+                        key_error_triggered = True
+                finally:
+                    # Clean up the uploaded Gemini file to free up user space for this key
+                    if uploaded_file:
+                        try:
+                            await client.aio.files.delete(name=uploaded_file.name)
+                            logger.info(f"Successfully cleaned up Gemini file: {uploaded_file.name}")
+                        except Exception as e:
+                            logger.warning(f"Failed to delete temporary Gemini file {uploaded_file.name}: {e}")
+                    
+                    try:
+                        await client.aio.aclose()
+                    except Exception as e:
+                        logger.warning(f"Failed to close Gemini API client connection for key {masked}: {e}")
+                
+                if response is not None:
                     break
-
-                if attempt < max_tries - 1:
-                    delay = delays[attempt]
-                    logger.info(f"Waiting {delay} seconds before retrying the transcription pipeline...")
-                    await asyncio.sleep(delay)
+                    
+                if key_error_triggered:
+                    continue
             
             if response is None:
-                logger.error(f"All transcription models failed after all pipeline attempts. Last error: {last_exception}")
+                logger.error(f"All transcription API keys/models failed. Last error: {last_exception}")
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=(
-                        f"Gemini transcription failed for all models: {', '.join(models)}. "
-                        f"Last error: {str(last_exception)}"
-                    )
+                    detail=f"Gemini transcription failed for all configured API keys. Last error: {str(last_exception)}"
                 )
-
+                
             # Parse the response into TranscriptionResponse Pydantic model
             if response.parsed:
                 return response.parsed
@@ -217,7 +248,7 @@ class GeminiTranscriptionService:
                     status_code=status.HTTP_502_BAD_GATEWAY,
                     detail="Gemini API returned an empty response."
                 )
-            
+                
         finally:
             # Clean up the local temporary audio file
             if local_file_path and os.path.exists(local_file_path):
@@ -226,20 +257,6 @@ class GeminiTranscriptionService:
                     logger.info(f"Cleaned up local audio file: {local_file_path}")
                 except Exception as e:
                     logger.warning(f"Failed to remove local temporary file {local_file_path}: {e}")
-            
-            # Clean up the uploaded Gemini file to free up user space
-            if uploaded_file:
-                try:
-                    await client.aio.files.delete(name=uploaded_file.name)
-                    logger.info(f"Successfully cleaned up Gemini file: {uploaded_file.name}")
-                except Exception as e:
-                    logger.warning(f"Failed to delete temporary Gemini file {uploaded_file.name}: {e}")
-            
-            # Ensure the GenAI client session is closed
-            try:
-                await client.aio.aclose()
-            except Exception as e:
-                logger.warning(f"Failed to close Gemini API client connection: {e}")
 
 
 
