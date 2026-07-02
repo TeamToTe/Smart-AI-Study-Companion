@@ -44,6 +44,9 @@ export default function App() {
     const saved = localStorage.getItem('studymind_video_overlay_cc');
     return saved !== null ? saved === 'true' : true;
   });
+  const [subMode, setSubMode] = useState(() => {
+    return localStorage.getItem('studymind_sub_mode') || 'bilingual';
+  });
   const [pauseTrigger, setPauseTrigger] = useState(0);
   const [togglePlayTrigger, setTogglePlayTrigger] = useState(0);
   
@@ -96,6 +99,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('studymind_video_overlay_cc', videoOverlayCc);
   }, [videoOverlayCc]);
+
+  // Save subMode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('studymind_sub_mode', subMode);
+  }, [subMode]);
 
   // Save active tab preference to sessionStorage
   useEffect(() => {
@@ -726,6 +734,7 @@ export default function App() {
                   lang={lang}
                   pauseTrigger={pauseTrigger}
                   togglePlayTrigger={togglePlayTrigger}
+                  subMode={subMode}
                 />
                 <SubtitleViewer 
                   segments={segments} 
@@ -737,6 +746,8 @@ export default function App() {
                   setVideoOverlayCc={setVideoOverlayCc}
                   onHoverDomainWord={() => setPauseTrigger(prev => prev + 1)}
                   setPauseTrigger={setPauseTrigger}
+                  subMode={subMode}
+                  setSubMode={setSubMode}
                 />
               </div>
 

@@ -23,7 +23,7 @@ function isVietnameseText(text) {
   return /[áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ]/.test(text);
 }
 
-export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang, pauseTrigger, togglePlayTrigger }) {
+export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang, pauseTrigger, togglePlayTrigger, subMode }) {
   const { session } = useAuth();
   const [dynamicGlossary, setDynamicGlossary] = useState({});
   const [hoveredTerm, setHoveredTerm] = useState(null);
@@ -466,10 +466,12 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
             </p>
           ) : (
             <>
-              <p className="caption-en">
-                {renderHighlightedText(activeSegment.original_text || activeSegment.text, activeSegment.domain_words)}
-              </p>
-              {lang === 'vi' && (
+              {(subMode === 'en' || subMode === 'bilingual') && (
+                <p className="caption-en">
+                  {renderHighlightedText(activeSegment.original_text || activeSegment.text, activeSegment.domain_words)}
+                </p>
+              )}
+              {(subMode === 'vi' || subMode === 'bilingual') && lang === 'vi' && (
                 <p className="caption-vi">
                   {renderHighlightedText(activeSegment.original_text ? activeSegment.text : getMockTranslationForOverlay(activeSegment.text), activeSegment.domain_words)}
                 </p>
