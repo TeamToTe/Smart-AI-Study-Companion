@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from google import genai
 from google.genai import types
 
-from app.core.key_rotation import get_gemini_api_key
+from app.core.key_rotation import get_gemini_api_key, get_all_gemini_api_keys
 from app.services.database import DatabaseService
 from app.schemas.glossary import GlossaryTermResponse
 
@@ -38,15 +38,13 @@ class GlossaryService:
 
         # 2. Không tìm thấy, gọi Gemini để định nghĩa
         logger.info(f"Glossary term '{term_clean}' not found in Supabase. Generating definition via Gemini...")
-        api_key = get_gemini_api_key()
-        if not api_key:
+        api_keys = get_all_gemini_api_keys()
+        if not api_keys:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Gemini API Key is not configured on the server."
             )
             
-        client = genai.Client(api_key=api_key)
-        
         query_prompt = (
             f"Hãy định nghĩa ngắn gọn thuật ngữ kỹ thuật sau đây trong ngữ cảnh học tập: \"{term_clean}\".\n"
             "Bản dịch tiếng Việt và định nghĩa phải ngắn gọn (khoảng 15-20 từ).\n"
@@ -64,38 +62,66 @@ class GlossaryService:
                 "gemini-2.5-flash"
             ]
             parsed_def = None
+            last_exception = None
             
-            for idx, model_name in enumerate(models):
-                try:
-                    if idx > 0:
-                        logger.warning(f"Fallback to {model_name}...")
-                    logger.info(f"Calling Gemini for glossary generation using {model_name}...")
-                    response = await client.aio.models.generate_content(
-                        model=model_name,
-                        contents=query_prompt,
-                        config=types.GenerateContentConfig(
-                            temperature=0.2,
+            for k_idx, api_key in enumerate(api_keys):
+                masked = api_key[:6] + "..." + api_key[-4:] if len(api_key) > 10 else "..."
+                logger.info(f"Attempting glossary definition with Gemini API Key #{k_idx+1}/{len(api_keys)}: {masked}")
+                client = genai.Client(api_key=api_key)
+                key_error_triggered = False
+                
+                for idx, model_name in enumerate(models):
+                    try:
+                        if idx > 0:
+                            logger.warning(f"Fallback to {model_name}...")
+                        logger.info(f"Calling Gemini for glossary generation using {model_name}...")
+                        response = await client.aio.models.generate_content(
+                            model=model_name,
+                            contents=query_prompt,
+                            config=types.GenerateContentConfig(
+                                temperature=0.2,
+                            )
                         )
-                    )
-                    raw_text = response.text or ""
-                    parsed_def = self._parse_gemini_json(raw_text, term_clean)
+                        raw_text = response.text or ""
+                        parsed_def = self._parse_gemini_json(raw_text, term_clean)
+                        break
+                    except Exception as e:
+                        last_exception = e
+                        logger.error(f"Model {model_name} failed for glossary using key {masked}: {e}")
+                        
+                        err_msg = str(e).lower()
+                        if any(x in err_msg for x in ["429", "exhausted", "quota", "limit", "key", "invalid", "401", "403"]):
+                            logger.warning(f"Key-level error detected on key {masked}. Skipping this key...")
+                            key_error_triggered = True
+                            break
+                
+                try:
+                    await client.aio.aclose()
+                except Exception as close_err:
+                    logger.warning(f"Failed to close Gemini API client connection: {close_err}")
+                    
+                if parsed_def is not None:
                     break
-                except Exception as e:
-                    logger.error(f"Model {model_name} failed for glossary: {e}")
+                    
+                if key_error_triggered:
+                    continue
 
             if parsed_def is None:
-                logger.error("All Gemini models failed for glossary generation. Using fallback default.")
+                logger.error(f"All Gemini keys/models failed for glossary generation. Last error: {last_exception}. Using fallback default.")
                 parsed_def = {
                     "term": term_clean,
                     "translation": term_clean,
                     "definition": "Thuật ngữ chuyên ngành trong bài giảng.",
                     "category": "General"
                 }
-        finally:
-            try:
-                await client.aio.aclose()
-            except Exception as close_err:
-                logger.warning(f"Failed to close Gemini API client connection: {close_err}")
+        except Exception as main_err:
+            logger.error(f"Unexpected error in glossary service: {main_err}")
+            parsed_def = {
+                "term": term_clean,
+                "translation": term_clean,
+                "definition": "Thuật ngữ chuyên ngành trong bài giảng.",
+                "category": "General"
+            }
 
         # 3. Lưu vào Supabase để lần sau lấy nhanh
         await db_service.save_glossary_term(

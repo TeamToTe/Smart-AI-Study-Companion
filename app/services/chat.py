@@ -3,7 +3,7 @@ from google import genai
 from google.genai import types
 from fastapi import HTTPException, status
 from app.schemas.chat import ChatRequest, ChatResponse, RawChatRequest
-from app.core.key_rotation import get_gemini_api_key
+from app.core.key_rotation import get_gemini_api_key, get_all_gemini_api_keys
 from app.services.database import DatabaseService
 
 logger = logging.getLogger(__name__)
@@ -28,15 +28,13 @@ class ChatService:
         if len(history_messages) // 2 >= MAX_EXCHANGES_PER_SESSION:
             return ChatResponse(response=LIMIT_EXCEEDED_MESSAGE)
 
-        api_key = get_gemini_api_key()
-        if not api_key:
+        api_keys = get_all_gemini_api_keys()
+        if not api_keys:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Gemini API Key is not configured on the server. Please set GEMINI_API_KEY or GEMINI_API_KEYS in the environment."
             )
             
-        client = genai.Client(api_key=api_key)
-        
         # 2. Định dạng toàn bộ phụ đề thành ngữ cảnh có chứa timestamp
         transcript_context = ""
         for seg in payload.segments:
@@ -74,7 +72,7 @@ class ChatService:
             parts=[types.Part.from_text(text=payload.query)]
         ))
 
-        # 5. Thực hiện cuộc gọi API bất đồng bộ tới Gemini
+        # 5. Thực hiện cuộc gọi API bất đồng bộ tới Gemini với cơ chế xoay vòng và retry Key
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=0.3,
@@ -90,54 +88,69 @@ class ChatService:
         response = None
         last_exception = None
 
-        for idx, model_name in enumerate(models):
-            try:
-                if idx > 0:
-                    logger.warning(f"Fallback to {model_name}...")
-                logger.info(f"Sending chatbot request to Gemini using {model_name}...")
-                response = await client.aio.models.generate_content(
-                    model=model_name,
-                    contents=contents,
-                    config=config,
-                )
-                break
-            except Exception as e:
-                last_exception = e
-                logger.error(f"Error calling Gemini in ChatService with {model_name}: {e}")
-
-        try:
-            if response is None:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"All Gemini models failed. Last error: {str(last_exception)}"
-                )
+        for k_idx, api_key in enumerate(api_keys):
+            masked = api_key[:6] + "..." + api_key[-4:] if len(api_key) > 10 else "..."
+            logger.info(f"Attempting chatbot request with Gemini API Key #{k_idx+1}/{len(api_keys)}: {masked}")
+            client = genai.Client(api_key=api_key)
+            key_error_triggered = False
             
-            ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
+            for idx, model_name in enumerate(models):
+                try:
+                    if idx > 0:
+                        logger.warning(f"Fallback to {model_name}...")
+                    logger.info(f"Sending chatbot request to Gemini using {model_name}...")
+                    response = await client.aio.models.generate_content(
+                        model=model_name,
+                        contents=contents,
+                        config=config,
+                    )
+                    break
+                except Exception as e:
+                    last_exception = e
+                    logger.error(f"Error calling Gemini in ChatService with {model_name} using key {masked}: {e}")
+                    
+                    err_msg = str(e).lower()
+                    if any(x in err_msg for x in ["429", "exhausted", "quota", "limit", "key", "invalid", "401", "403"]):
+                        logger.warning(f"Key-level error detected on key {masked}. Skipping this key...")
+                        key_error_triggered = True
+                        break
             
-            # Lưu cặp tin nhắn (user query & bot response) vào database
-            await db_service.save_chat_message(user_token, payload.session_id, payload.query, ai_reply)
-            
-            return ChatResponse(response=ai_reply)
-        finally:
             try:
                 await client.aio.aclose()
-            except Exception as e:
-                logger.warning(f"Failed to close Gemini API client connection: {e}")
+            except Exception as close_err:
+                logger.warning(f"Failed to close Gemini API client connection for key {masked}: {close_err}")
+                
+            if response is not None:
+                break
+            
+            if key_error_triggered:
+                continue
+
+        if response is None:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"All Gemini API keys and models failed. Last error: {str(last_exception)}"
+            )
+        
+        ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
+        
+        # Lưu cặp tin nhắn (user query & bot response) vào database
+        await db_service.save_chat_message(user_token, payload.session_id, payload.query, ai_reply)
+        
+        return ChatResponse(response=ai_reply)
 
     async def get_raw_gemini_response(self, payload: RawChatRequest) -> ChatResponse:
         """
         Gửi prompt và ngữ cảnh phụ đề trực tiếp tới Gemini mà không đọc/ghi lịch sử vào database.
         Phù hợp cho các tác vụ tiện ích như sinh sơ đồ tư duy (Mindmap) hay thẻ học tập (Flashcard).
         """
-        api_key = get_gemini_api_key()
-        if not api_key:
+        api_keys = get_all_gemini_api_keys()
+        if not api_keys:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Gemini API Key is not configured."
             )
             
-        client = genai.Client(api_key=api_key)
-        
         # 1. Định dạng phụ đề
         transcript_context = ""
         for seg in payload.segments:
@@ -174,35 +187,52 @@ class ChatService:
         response = None
         last_exception = None
 
-        for idx, model_name in enumerate(models):
-            try:
-                if idx > 0:
-                    logger.warning(f"Fallback to {model_name}...")
-                logger.info(f"Sending raw chatbot request to Gemini using {model_name}...")
-                response = await client.aio.models.generate_content(
-                    model=model_name,
-                    contents=contents,
-                    config=config,
-                )
-                break
-            except Exception as e:
-                last_exception = e
-                logger.error(f"Error calling Gemini in get_raw_gemini_response with {model_name}: {e}")
-
-        try:
-            if response is None:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=f"All Gemini models failed. Last error: {str(last_exception)}"
-                )
+        for k_idx, api_key in enumerate(api_keys):
+            masked = api_key[:6] + "..." + api_key[-4:] if len(api_key) > 10 else "..."
+            logger.info(f"Attempting raw chatbot request with Gemini API Key #{k_idx+1}/{len(api_keys)}: {masked}")
+            client = genai.Client(api_key=api_key)
+            key_error_triggered = False
             
-            ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
-            return ChatResponse(response=ai_reply)
-        finally:
+            for idx, model_name in enumerate(models):
+                try:
+                    if idx > 0:
+                        logger.warning(f"Fallback to {model_name}...")
+                    logger.info(f"Sending raw chatbot request to Gemini using {model_name}...")
+                    response = await client.aio.models.generate_content(
+                        model=model_name,
+                        contents=contents,
+                        config=config,
+                    )
+                    break
+                except Exception as e:
+                    last_exception = e
+                    logger.error(f"Error calling Gemini in get_raw_gemini_response with {model_name} using key {masked}: {e}")
+                    
+                    err_msg = str(e).lower()
+                    if any(x in err_msg for x in ["429", "exhausted", "quota", "limit", "key", "invalid", "401", "403"]):
+                        logger.warning(f"Key-level error detected on key {masked}. Skipping this key...")
+                        key_error_triggered = True
+                        break
+            
             try:
                 await client.aio.aclose()
             except Exception:
                 pass
+                
+            if response is not None:
+                break
+            
+            if key_error_triggered:
+                continue
+
+        if response is None:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"All Gemini API keys and models failed. Last error: {str(last_exception)}"
+            )
+        
+        ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
+        return ChatResponse(response=ai_reply)
 
 def get_chat_service() -> ChatService:
     """Dependency injection provider cho ChatService."""
