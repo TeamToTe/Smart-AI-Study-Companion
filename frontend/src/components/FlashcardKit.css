@@ -77,7 +77,8 @@
 .card-type {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between; /* Push question label left, taxonomy badge right */
+  width: 100%;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 1px;
@@ -151,4 +152,66 @@
   padding: 40px;
   text-align: center;
   color: var(--text-muted);
+}
+
+/* Taxonomy Bloom Badges */
+.taxonomy-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  color: white;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.taxonomy-badge.remember {
+  background: linear-gradient(135deg, #ec4899, #8b5cf6); /* Pink to Purple */
+}
+
+.taxonomy-badge.understand {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6); /* Cyan to Blue */
+}
+
+.taxonomy-badge.apply {
+  background: linear-gradient(135deg, #10b981, #059669); /* Emerald to Dark Green */
+}
+
+.taxonomy-badge.analyze {
+  background: linear-gradient(135deg, #f59e0b, #d97706); /* Amber to Dark Orange */
+}
+
+/* Card Math & Inline Code Styles */
+.card-math-inline {
+  font-family: "Times New Roman", Georgia, serif;
+  font-style: italic;
+  font-weight: 700;
+  padding: 0 4px;
+  color: var(--color-accent);
+  font-size: 1.1em;
+}
+
+.card-math-block {
+  font-family: "Times New Roman", Georgia, serif;
+  font-style: italic;
+  text-align: center;
+  margin: var(--spacing-sm) 0;
+  font-size: 1.15em;
+  color: var(--color-accent);
+  display: block;
+  background: rgba(255, 255, 255, 0.02);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--rounded-md);
+  border: 1px dashed var(--border-color);
+}
+
+.card-inline-code {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.9em;
+  color: var(--color-accent);
 }

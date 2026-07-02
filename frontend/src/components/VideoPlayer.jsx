@@ -23,7 +23,7 @@ function isVietnameseText(text) {
   return /[áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđĐ]/.test(text);
 }
 
-export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang, pauseTrigger }) {
+export default function VideoPlayer({ url, onProgress, seekTime, segments, currentTime, showOverlay, lang, pauseTrigger, togglePlayTrigger }) {
   const { session } = useAuth();
   const [dynamicGlossary, setDynamicGlossary] = useState({});
   const [hoveredTerm, setHoveredTerm] = useState(null);
@@ -404,6 +404,18 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
       playerRef.current.pauseVideo();
     }
   }, [pauseTrigger]);
+
+  // Handle external play/pause toggle requests (e.g., Spacebar shortcut)
+  useEffect(() => {
+    if (playerRef.current && togglePlayTrigger > 0) {
+      const state = typeof playerRef.current.getPlayerState === 'function' ? playerRef.current.getPlayerState() : null;
+      if (state === window.YT.PlayerState.PLAYING) {
+        if (typeof playerRef.current.pauseVideo === 'function') playerRef.current.pauseVideo();
+      } else {
+        if (typeof playerRef.current.playVideo === 'function') playerRef.current.playVideo();
+      }
+    }
+  }, [togglePlayTrigger]);
 
   const startPollingProgress = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);

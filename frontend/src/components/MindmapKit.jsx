@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Network, ZoomIn, ZoomOut, RotateCcw, Play, Info } from 'lucide-react';
+import { Network, ZoomIn, ZoomOut, RotateCcw, Play, Info, MessageSquare } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './MindmapKit.css';
 
-export default function MindmapKit({ segments, onSeek, t, videoUrl, lang }) {
+export default function MindmapKit({ segments, onSeek, t, videoUrl, lang, setChatQuery, setActiveTab }) {
   const { session } = useAuth();
   const [mindmapData, setMindmapData] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -675,14 +675,32 @@ export default function MindmapKit({ segments, onSeek, t, videoUrl, lang }) {
         <div className="node-details-box glass animate-fade-in" style={{ zIndex: 5 }}>
           <div className="node-details-header">
             <h4>{cleanLabelText(selectedNode.root_title || selectedNode.label)}</h4>
-            <button 
-              className="play-node-btn btn-primary"
-              onClick={() => handlePlayNode(getNodeTimestamp(selectedNode))}
-              title="Seek Video to Node Timestamp"
-            >
-              <Play size={12} fill="white" />
-              <span>{formatTime(getNodeTimestamp(selectedNode))}</span>
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                className="play-node-btn btn-primary"
+                onClick={() => handlePlayNode(getNodeTimestamp(selectedNode))}
+                title="Seek Video to Node Timestamp"
+              >
+                <Play size={12} fill="white" />
+                <span>{formatTime(getNodeTimestamp(selectedNode))}</span>
+              </button>
+              <button 
+                className="ask-ai-node-btn btn-secondary"
+                onClick={() => {
+                  const nodeLabel = selectedNode.root_title || selectedNode.label || "";
+                  const question = lang === 'vi'
+                    ? `Hãy giải thích chi tiết cho tôi về phần "${cleanLabelText(nodeLabel)}" được đề cập trong bài học này.`
+                    : `Please explain in detail about "${cleanLabelText(nodeLabel)}" mentioned in this lesson.`;
+                  setChatQuery(question);
+                  setActiveTab('chat');
+                }}
+                title="Ask AI about this topic"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <MessageSquare size={12} />
+                <span>{lang === 'vi' ? 'Hỏi AI' : 'Ask AI'}</span>
+              </button>
+            </div>
           </div>
           <p className="node-desc">
             <Info size={12} className="info-icon" />

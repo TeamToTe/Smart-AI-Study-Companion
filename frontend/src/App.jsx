@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User, Menu, X } from 'lucide-react';
+import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User, Menu, X, HelpCircle } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import SkeletonLoader from './components/SkeletonLoader';
 import VideoPlayer from './components/VideoPlayer';
@@ -13,6 +13,7 @@ import ThemeToggle from './components/ThemeToggle';
 import LanguageToggle from './components/LanguageToggle';
 import { useAuth } from './context/AuthContext';
 import AuthModal from './components/AuthModal';
+import GuideModal from './components/GuideModal';
 import ConfirmModal from './components/ConfirmModal';
 import { LOCALIZATION } from './data/localization';
 import { EXAMPLES } from './data/examples';
@@ -33,6 +34,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(() => {
     return sessionStorage.getItem('studymind_active_tab') || 'chat';
   });
+  const [chatQuery, setChatQuery] = useState(null);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   
   const [isProcessed, setIsProcessed] = useState(false);
   const [pendingWorkspaceData, setPendingWorkspaceData] = useState(null);
@@ -42,6 +45,7 @@ export default function App() {
     return saved !== null ? saved === 'true' : true;
   });
   const [pauseTrigger, setPauseTrigger] = useState(0);
+  const [togglePlayTrigger, setTogglePlayTrigger] = useState(0);
   
   // Auth state
   const { user, session, signOut, loading: authLoading, isRecovering, setIsRecovering } = useAuth();
@@ -97,6 +101,74 @@ export default function App() {
   useEffect(() => {
     sessionStorage.setItem('studymind_active_tab', activeTab);
   }, [activeTab]);
+
+  // Auto-open guide tour on first load of video workspace
+  useEffect(() => {
+    if (isProcessed && segments.length > 0) {
+      const tourCompleted = localStorage.getItem('studymind_tour_completed');
+      if (!tourCompleted) {
+        setIsGuideOpen(true);
+        localStorage.setItem('studymind_tour_completed', 'true');
+      }
+    }
+  }, [isProcessed, segments]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleGlobalShortcuts = (e) => {
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        activeEl.isContentEditable
+      );
+
+      // Alt + 1/2/3/4: tab switching
+      if (e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
+        e.preventDefault();
+        const tabMap = {
+          '1': 'chat',
+          '2': 'flashcards',
+          '3': 'quiz',
+          '4': 'mindmap'
+        };
+        setActiveTab(tabMap[e.key]);
+        return;
+      }
+
+      // If user is typing, ignore other global shortcuts
+      if (isTyping) return;
+
+      // Space: Toggle play/pause
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setTogglePlayTrigger(prev => prev + 1);
+      }
+
+      // Left Arrow: Seek backward 5s
+      if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        setSeekTime(Math.max(0, currentTime - 5));
+      }
+
+      // Right Arrow: Seek forward 5s
+      if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        setSeekTime(currentTime + 5);
+      }
+
+      // Shift + N: Flip flashcard
+      if (e.shiftKey && e.code === 'KeyN') {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('studymind-flip-card'));
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalShortcuts);
+    };
+  }, [currentTime]);
 
   // 2. Load History on Mount
   useEffect(() => {
@@ -525,6 +597,14 @@ export default function App() {
         <div className="header-controls">
           <LanguageToggle lang={lang} setLang={setLang} />
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
+          <button 
+            className="btn-secondary help-tour-btn" 
+            onClick={() => setIsGuideOpen(true)} 
+            title={lang === 'vi' ? 'Hướng dẫn học tập' : 'Study Guide'}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, borderRadius: '50%' }}
+          >
+            <HelpCircle size={16} />
+          </button>
           
           {user ? (
             <div className="user-profile-menu">
@@ -564,6 +644,14 @@ export default function App() {
               <div className="mobile-controls-row">
                 <LanguageToggle lang={lang} setLang={setLang} />
                 <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
+                <button 
+                  className="btn-secondary help-tour-btn" 
+                  onClick={() => { setIsGuideOpen(true); setMobileMenuOpen(false); }} 
+                  title={lang === 'vi' ? 'Hướng dẫn học tập' : 'Study Guide'}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+                >
+                  <HelpCircle size={16} />
+                </button>
               </div>
             </div>
             
@@ -637,6 +725,7 @@ export default function App() {
                   showOverlay={videoOverlayCc}
                   lang={lang}
                   pauseTrigger={pauseTrigger}
+                  togglePlayTrigger={togglePlayTrigger}
                 />
                 <SubtitleViewer 
                   segments={segments} 
@@ -647,6 +736,7 @@ export default function App() {
                   videoOverlayCc={videoOverlayCc}
                   setVideoOverlayCc={setVideoOverlayCc}
                   onHoverDomainWord={() => setPauseTrigger(prev => prev + 1)}
+                  setPauseTrigger={setPauseTrigger}
                 />
               </div>
 
@@ -654,7 +744,7 @@ export default function App() {
               <div className="right-column">
                 <SidebarTabs activeTab={activeTab} setActiveTab={setActiveTab} t={t}>
                   <div style={{ display: activeTab === 'chat' ? 'block' : 'none', height: '100%' }}>
-                    <RAGChatbot segments={segments} onSeek={handleSeek} t={t} videoUrl={url} />
+                    <RAGChatbot segments={segments} onSeek={handleSeek} t={t} videoUrl={url} chatQuery={chatQuery} setChatQuery={setChatQuery} />
                   </div>
                   <div style={{ display: activeTab === 'flashcards' ? 'block' : 'none', height: '100%' }}>
                     <FlashcardKit segments={segments} t={t} videoUrl={url} lang={lang} />
@@ -663,7 +753,7 @@ export default function App() {
                     <QuizKit segments={segments} t={t} videoUrl={url} lang={lang} />
                   </div>
                   <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
-                    <MindmapKit segments={segments} onSeek={handleSeek} t={t} videoUrl={url} lang={lang} />
+                    <MindmapKit segments={segments} onSeek={handleSeek} t={t} videoUrl={url} lang={lang} setChatQuery={setChatQuery} setActiveTab={setActiveTab} />
                   </div>
                 </SidebarTabs>
               </div>
@@ -722,6 +812,13 @@ export default function App() {
         }} 
         lang={lang} 
         initialMode={authModalMode}
+      />
+
+      {/* Guide Modal Tour */}
+      <GuideModal 
+        isOpen={isGuideOpen} 
+        onClose={() => setIsGuideOpen(false)} 
+        lang={lang} 
       />
     </div>
   );
