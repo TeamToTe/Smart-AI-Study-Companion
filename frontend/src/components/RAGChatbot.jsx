@@ -4,7 +4,32 @@ import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import './RAGChatbot.css';
 
-export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
+const CodeBlock = ({ code, language }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="chat-code-block-container">
+      <div className="chat-code-block-header">
+        <span className="chat-code-lang">{language}</span>
+        <button className="chat-code-copy-btn" onClick={handleCopy}>
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+      </div>
+      <pre className="chat-code-pre">
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+};
+
+export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, setChatQuery }) {
   const { session } = useAuth();
   const [messages, setMessages] = useState([]);
   const [sessionId, setSessionId] = useState(null);
@@ -86,9 +111,12 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
     if (!text) return null;
     
     const lines = text.split('\n');
-    let insideList = false;
     const renderedElements = [];
+    let insideList = false;
     let listItems = [];
+    let insideCodeBlock = false;
+    let codeBlockLines = [];
+    let codeLanguage = '';
 
     // Helper: Parse inline styles (Timestamp, Bold, Inline code)
     const parseInlineStyles = (lineText, lineKey) => {
@@ -112,7 +140,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
         parts.push(
           <button 
             key={`${lineKey}-ts-${matchIndex}`}
-            className="chat-timestamp-badge"
+            className="chat-timestamp-badge animate-pulse-glow"
             onClick={() => handleTimestampClick(totalSeconds)}
             title={`Seek to ${match[1]}:${match[2]}`}
           >
@@ -131,9 +159,9 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
       return parts.length > 0 ? parts : [lineText];
     };
 
-    // Helper: Parse Bold **bold** and Code `code`
+    // Helper: Parse Bold **bold**, Code `code`, and Math $math$
     const parseBoldAndCode = (inputText, parentKey) => {
-      const regex = /(\*\*.*?\*\*|`.*?`)/g;
+      const regex = /(\*\*.*?\*\*|`.*?`|\$[^\s$]+?\$)/g;
       const parts = inputText.split(regex);
       
       return parts.map((part, index) => {
@@ -144,13 +172,56 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
         if (part.startsWith('`') && part.endsWith('`')) {
           return <code key={key} className="chat-inline-code">{part.slice(1, -1)}</code>;
         }
+        if (part.startsWith('$') && part.endsWith('$')) {
+          return <span key={key} className="chat-math-inline">{part.slice(1, -1)}</span>;
+        }
         return part;
       });
     };
 
-    lines.forEach((line, lineIndex) => {
+    const flushList = (key) => {
+      if (insideList && listItems.length > 0) {
+        renderedElements.push(
+          <ul key={key} className="chat-ul">
+            {listItems}
+          </ul>
+        );
+        listItems = [];
+        insideList = false;
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       const trimmedLine = line.trim();
-      const lineKey = `line-${lineIndex}`;
+      const lineKey = `line-${i}`;
+
+      if (trimmedLine.startsWith('```')) {
+        flushList(`flush-list-code-${i}`);
+        
+        if (insideCodeBlock) {
+          const codeContent = codeBlockLines.join('\n');
+          renderedElements.push(
+            <CodeBlock 
+              key={`code-${i}`} 
+              code={codeContent} 
+              language={codeLanguage} 
+            />
+          );
+          insideCodeBlock = false;
+          codeBlockLines = [];
+          codeLanguage = '';
+        } else {
+          insideCodeBlock = true;
+          codeLanguage = trimmedLine.slice(3).trim() || 'code';
+        }
+        continue;
+      }
+
+      if (insideCodeBlock) {
+        codeBlockLines.push(line);
+        continue;
+      }
 
       if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
         if (!insideList) {
@@ -159,21 +230,20 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
         }
         const itemContent = trimmedLine.substring(2);
         listItems.push(
-          <li key={`li-${lineIndex}`}>
-            {parseInlineStyles(itemContent, `li-content-${lineIndex}`)}
+          <li key={`li-${i}`}>
+            {parseInlineStyles(itemContent, `li-content-${i}`)}
           </li>
         );
       } else {
-        if (insideList) {
-          renderedElements.push(
-            <ul key={`ul-${lineIndex}`} className="chat-ul">
-              {listItems}
-            </ul>
-          );
-          insideList = false;
-        }
+        flushList(`flush-list-${i}`);
 
-        if (trimmedLine.startsWith('### ')) {
+        if (trimmedLine.startsWith('$$') && trimmedLine.endsWith('$$')) {
+          renderedElements.push(
+            <div key={lineKey} className="chat-math-block">
+              {trimmedLine.slice(2, -2)}
+            </div>
+          );
+        } else if (trimmedLine.startsWith('### ')) {
           renderedElements.push(
             <h4 key={lineKey} className="chat-h4">
               {parseInlineStyles(trimmedLine.substring(4), lineKey)}
@@ -199,46 +269,48 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
           );
         }
       }
-    });
+    }
 
-    if (insideList) {
+    flushList('flush-list-end');
+    if (insideCodeBlock && codeBlockLines.length > 0) {
       renderedElements.push(
-        <ul key="ul-end" className="chat-ul">
-          {listItems}
-        </ul>
+        <CodeBlock 
+          key="code-end" 
+          code={codeBlockLines.join('\n')} 
+          language={codeLanguage} 
+        />
       );
     }
 
     return renderedElements;
   };
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!input.trim() || loading || !isLoggedIn) return;
+  const sendMessage = async (textToSend) => {
+    if (!textToSend.trim() || loading) return;
 
-    const userText = input.trim();
     const newMsg = {
       sender: 'user',
-      text: userText,
+      text: textToSend,
       time: new Date()
     };
 
     setMessages(prev => [...prev, newMsg]);
-    setInput('');
     setLoading(true);
 
     try {
       const headers = { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Content-Type': 'application/json'
       };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
 
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: headers,
         body: JSON.stringify({
           session_id: sessionId,
-          query: userText,
+          query: textToSend,
           segments: segments.map(seg => ({
             start: seg.start,
             end: seg.end,
@@ -271,6 +343,29 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Auto-send queries when chatQuery prop changes
+  useEffect(() => {
+    if (chatQuery) {
+      if (isLoggedIn) {
+        if (!loading) {
+          sendMessage(chatQuery);
+          setChatQuery(null);
+        }
+      } else {
+        setInput(chatQuery);
+        setChatQuery(null);
+      }
+    }
+  }, [chatQuery, isLoggedIn, loading]);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || loading || !isLoggedIn) return;
+    const userText = input.trim();
+    setInput('');
+    await sendMessage(userText);
   };
 
   return (

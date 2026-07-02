@@ -162,3 +162,218 @@
   background-color: rgba(37, 99, 235, 0.08);
   color: #1d4ed8;
 }
+
+/* Floating Dictionary Popover and Card Styles */
+.dict-popover {
+  position: fixed;
+  width: 320px;
+  max-height: 350px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 2000;
+  backdrop-filter: blur(20px);
+}
+
+.dict-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.dict-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.dict-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--rounded-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.dict-close-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dict-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  color: var(--text-secondary);
+  font-size: 13px;
+  gap: var(--spacing-sm);
+}
+
+.dict-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.dict-error .error-word {
+  font-size: 18px;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.dict-error .error-desc {
+  font-size: 13px;
+  margin-bottom: var(--spacing-lg);
+}
+
+.dict-content {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  overflow-y: auto;
+  max-height: 280px;
+}
+
+.word-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.word-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: capitalize;
+}
+
+.word-phonetic {
+  font-size: 14px;
+  color: var(--color-accent);
+  font-family: monospace;
+}
+
+.voice-btn {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: var(--color-accent);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.voice-btn:hover {
+  background: var(--color-accent);
+  color: white;
+}
+
+.meanings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.meaning-item {
+  border-left: 2px solid var(--color-accent);
+  padding-left: var(--spacing-sm);
+}
+
+.part-of-speech {
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.definitions-ul {
+  margin: 0;
+  padding-left: 14px;
+  list-style: disc;
+}
+
+.definitions-ul li {
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.definitions-ul li:last-child {
+  margin-bottom: 0;
+}
+
+.def-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.def-example {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
+}
+
+.dict-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border-color);
+  padding: var(--spacing-sm) 0 0 0;
+}
+
+.cambridge-link-btn {
+  display: block;
+  text-align: center;
+  background: var(--color-accent);
+  color: white;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: var(--rounded-md);
+  transition: opacity var(--transition-fast);
+  cursor: pointer;
+}
+
+.cambridge-link-btn:hover {
+  opacity: 0.9;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

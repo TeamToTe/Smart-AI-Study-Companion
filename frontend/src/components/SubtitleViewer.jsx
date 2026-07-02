@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Play, Volume2, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Play, Volume2, ShieldCheck, HelpCircle, Loader2, X } from 'lucide-react';
 import { GLOSSARY } from '../data/glossary';
 import { useAuth } from '../context/AuthContext';
 import GlossaryTooltip from './GlossaryTooltip';
@@ -46,7 +46,7 @@ function smoothScrollTo(element, target, duration = 250) {
   requestAnimationFrame(animateScroll);
 }
 
-export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc, onHoverDomainWord }) {
+export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc, onHoverDomainWord, setPauseTrigger }) {
   const { session } = useAuth();
   const [activeIdx, setActiveIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(() => {
@@ -61,6 +61,98 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [dynamicGlossary, setDynamicGlossary] = useState({});
+
+  // Quick Dictionary State and Handlers
+  const [dictLoading, setDictLoading] = useState(false);
+  const [dictData, setDictData] = useState(null);
+  const [dictWord, setDictWord] = useState('');
+  const [dictError, setDictError] = useState(null);
+  const [dictPos, setDictPos] = useState({ x: 0, y: 0 });
+
+  // Handle click-outside to close dictionary popover
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (event.target.closest('.subtitle-row')) return;
+      
+      const popoverEl = document.querySelector('.dict-popover');
+      if (popoverEl && !popoverEl.contains(event.target)) {
+        setDictWord('');
+        setDictLoading(false);
+        setDictData(null);
+      }
+    };
+    window.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
+
+  const handleSubtitleDoubleClick = async (e) => {
+    if (e) e.stopPropagation();
+    const selection = window.getSelection().toString().trim();
+    if (!selection) return;
+
+    // Clean word from punctuation
+    const cleanWord = selection.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "").trim();
+    if (!cleanWord || cleanWord.split(/\s+/).length > 2) return;
+
+    setDictWord(cleanWord);
+    setDictLoading(true);
+    setDictError(null);
+    setDictData(null);
+
+    // Calculate dictionary popover position based on mouse click coordinates
+    const popoverWidth = 320;
+    const popoverHeight = 220; // Estimated height
+    let x = e.clientX - popoverWidth / 2;
+    let y = e.clientY - popoverHeight - 12;
+    
+    x = Math.max(16, Math.min(x, window.innerWidth - popoverWidth - 16));
+    if (y < 16) {
+      y = e.clientY + 16;
+    } else {
+      y = Math.max(16, y);
+    }
+    
+    setDictPos({ x, y });
+
+    // Pause video playback for dictionary reading
+    if (typeof setPauseTrigger === 'function') {
+      setPauseTrigger(prev => prev + 1);
+    }
+
+    try {
+      const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(cleanWord.toLowerCase())}`);
+      if (!response.ok) {
+        throw new Error('Not found');
+      }
+      const data = await response.json();
+      if (data && data.length > 0) {
+        setDictData(data[0]);
+      } else {
+        throw new Error('Not found');
+      }
+    } catch (err) {
+      console.warn("Dictionary API lookup failed:", err);
+      setDictError(true);
+    } finally {
+      setDictLoading(false);
+    }
+  };
+
+  const getAudioUrl = () => {
+    if (!dictData || !dictData.phonetics) return null;
+    const phoneticWithAudio = dictData.phonetics.find(p => p.audio);
+    return phoneticWithAudio ? phoneticWithAudio.audio : null;
+  };
+
+  const playPronunciation = () => {
+    const audioUrl = getAudioUrl();
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(e => console.error("Failed to play pronunciation audio:", e));
+    }
+  };
   
   const containerRef = useRef(null);
   const activeLineRef = useRef(null);
@@ -282,18 +374,33 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
                 </button>
                 <div className="subtitle-content">
                   {isVietnameseText(seg.original_text) ? (
-                    <p className="sub-text-vi">
+                    <p 
+                      className="sub-text-vi" 
+                      onDoubleClick={(e) => handleSubtitleDoubleClick(e)} 
+                      onClick={(e) => e.stopPropagation()} 
+                      title="Nhấp đúp để tra từ điển"
+                    >
                       {renderHighlightedText(seg.text, seg.domain_words)}
                     </p>
                   ) : (
                     <>
                       {/* Original English Text (Entity-Protected) */}
-                      <p className="sub-text-en">
+                      <p 
+                        className="sub-text-en" 
+                        onDoubleClick={(e) => handleSubtitleDoubleClick(e)} 
+                        onClick={(e) => e.stopPropagation()} 
+                        title="Double click to look up word"
+                      >
                         {renderHighlightedText(seg.original_text || seg.text, seg.domain_words)}
                       </p>
                       {/* Vietnamese Context-aware Translation */}
                       {lang === 'vi' && (
-                        <p className="sub-text-vi">
+                        <p 
+                          className="sub-text-vi" 
+                          onDoubleClick={(e) => handleSubtitleDoubleClick(e)} 
+                          onClick={(e) => e.stopPropagation()} 
+                          title="Nhấp đúp để tra từ điển"
+                        >
                           {renderHighlightedText(seg.original_text ? seg.text : getMockTranslation(seg.text), seg.domain_words)}
                         </p>
                       )}
@@ -311,6 +418,83 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
         position={tooltipPos} 
         visible={tooltipVisible} 
       />
+
+      {/* Floating Quick Dictionary Popover */}
+      {(dictWord || dictLoading) && (
+        <div 
+          className="dict-popover glass animate-pop-in"
+          style={{
+            top: `${dictPos.y}px`,
+            left: `${dictPos.x}px`
+          }}
+        >
+          <div className="dict-header">
+            <h3>{lang === 'vi' ? 'Tra từ nhanh' : 'Quick Dictionary'}</h3>
+            <button className="dict-close-btn" onClick={() => { setDictWord(''); setDictLoading(false); setDictData(null); }} title="Close">
+              <X size={16} />
+            </button>
+          </div>
+          
+          {dictLoading ? (
+            <div className="dict-loading">
+              <Loader2 className="animate-spin" size={24} style={{ margin: '12px auto', color: 'var(--color-accent)' }} />
+              <span>{lang === 'vi' ? 'Đang tìm kiếm...' : 'Searching...'}</span>
+            </div>
+          ) : dictError ? (
+            <div className="dict-error">
+              <p className="error-word"><strong>"{dictWord}"</strong></p>
+              <p className="error-desc">{lang === 'vi' ? 'Không tìm thấy định nghĩa chi tiết cho từ này.' : 'Definition not found for this word.'}</p>
+              <a 
+                href={`https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(dictWord.toLowerCase())}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="cambridge-link-btn"
+              >
+                {lang === 'vi' ? 'Tìm trên Cambridge Dictionary' : 'Search Cambridge Dictionary'}
+              </a>
+            </div>
+          ) : dictData ? (
+            <div className="dict-content">
+              <div className="word-meta">
+                <span className="word-title">{dictData.word}</span>
+                {dictData.phonetic && <span className="word-phonetic">{dictData.phonetic}</span>}
+                {getAudioUrl() && (
+                  <button className="voice-btn" onClick={playPronunciation} title="Phát âm">
+                    <Volume2 size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="meanings-list">
+                {dictData.meanings?.slice(0, 2).map((meaning, mIdx) => (
+                  <div key={mIdx} className="meaning-item">
+                    <span className="part-of-speech">{meaning.partOfSpeech}</span>
+                    <ul className="definitions-ul">
+                      {meaning.definitions?.slice(0, 2).map((def, dIdx) => (
+                        <li key={dIdx}>
+                          <p className="def-text">{def.definition}</p>
+                          {def.example && <p className="def-example">e.g. "{def.example}"</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+
+              <div className="dict-footer">
+                <a 
+                  href={`https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(dictData.word.toLowerCase())}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="cambridge-link-btn"
+                >
+                  {lang === 'vi' ? 'Xem trên Cambridge Dictionary' : 'View on Cambridge Dictionary'}
+                </a>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
