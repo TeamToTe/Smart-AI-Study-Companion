@@ -38,6 +38,7 @@ async def _generate_translation_single_call(
                 "content": (
                     "You are a translation assistant. You must respond ONLY with a valid raw JSON object matching "
                     "the requested schema. Do NOT wrap the JSON in markdown code blocks (e.g. do NOT use ```json or ```). "
+                    "Keep the timestamp EXACTLY like the raw transcribe."
                     "Do NOT include any conversational or introductory text before or after the JSON. "
                     "Your response must start with '{' and end with '}'."
                 )

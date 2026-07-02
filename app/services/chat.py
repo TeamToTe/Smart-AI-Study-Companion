@@ -2,14 +2,25 @@ import logging
 from google import genai
 from google.genai import types
 from fastapi import HTTPException, status
+from groq import AsyncGroq
 from app.schemas.chat import ChatRequest, ChatResponse, RawChatRequest
-from app.core.key_rotation import get_gemini_api_key, get_all_gemini_api_keys
+from app.core.key_rotation import get_gemini_api_key, get_all_gemini_api_keys, get_all_groq_api_keys
 from app.services.database import DatabaseService
 
 logger = logging.getLogger(__name__)
 
 MAX_EXCHANGES_PER_SESSION = 5
 LIMIT_EXCEEDED_MESSAGE = "Xin lỗi, bạn đã đạt giới hạn 5 tin nhắn cho phiên này."
+
+GROQ_MODELS = [
+    'compound-beta', 
+    'compound-beta-mini', 
+    'gemma2-9b-it', 
+    'meta-llama/llama-4-maverick-17b-128e-instruct', 
+    'meta-llama/llama-4-scout-17b-16e-instruct', 
+    'meta-llama/llama-guard-4-12b', 
+    'moonshotai/kimi-k2-instruct'
+]
 
 class ChatService:
     async def get_chat_response(
@@ -29,10 +40,11 @@ class ChatService:
             return ChatResponse(response=LIMIT_EXCEEDED_MESSAGE)
 
         api_keys = get_all_gemini_api_keys()
-        if not api_keys:
+        groq_keys = get_all_groq_api_keys()
+        if not api_keys and not groq_keys:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Gemini API Key is not configured on the server. Please set GEMINI_API_KEY or GEMINI_API_KEYS in the environment."
+                detail="Neither Gemini nor Groq API Keys are configured on the server."
             )
             
         # 2. Định dạng toàn bộ phụ đề thành ngữ cảnh có chứa timestamp
@@ -126,13 +138,64 @@ class ChatService:
             if key_error_triggered:
                 continue
 
-        if response is None:
+        ai_reply = None
+        if response is not None:
+            ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
+        else:
+            if groq_keys:
+                logger.warning("All Gemini keys and models failed. Initiating fallback to Groq...")
+                groq_messages = [
+                    {"role": "system", "content": system_instruction}
+                ]
+                for msg in history_messages:
+                    role = "user" if msg["sender"] == "user" else "assistant"
+                    groq_messages.append({"role": role, "content": msg["text"]})
+                groq_messages.append({"role": "user", "content": payload.query})
+
+                for gk_idx, groq_key in enumerate(groq_keys):
+                    masked_groq = groq_key[:6] + "..." + groq_key[-4:] if len(groq_key) > 10 else "..."
+                    logger.info(f"Attempting fallback chatbot request with Groq API Key #{gk_idx+1}/{len(groq_keys)}: {masked_groq}")
+                    groq_client = AsyncGroq(api_key=groq_key)
+                    key_error_triggered = False
+
+                    for g_idx, groq_model in enumerate(GROQ_MODELS):
+                        try:
+                            if g_idx > 0:
+                                logger.warning(f"Fallback to Groq model {groq_model}...")
+                            logger.info(f"Sending chatbot request to Groq using {groq_model}...")
+                            groq_response = await groq_client.chat.completions.create(
+                                messages=groq_messages,
+                                model=groq_model,
+                                temperature=0.3,
+                            )
+                            if groq_response.choices and groq_response.choices[0].message.content:
+                                ai_reply = groq_response.choices[0].message.content.strip()
+                                break
+                        except Exception as ge:
+                            last_exception = ge
+                            logger.error(f"Error calling Groq in ChatService with {groq_model} using key {masked_groq}: {ge}")
+                            err_msg = str(ge).lower()
+                            if any(x in err_msg for x in ["429", "exhausted", "quota", "limit", "key", "invalid", "401", "403"]):
+                                logger.warning(f"Groq Key-level error detected on key {masked_groq}. Skipping this key...")
+                                key_error_triggered = True
+                                break
+                    
+                    try:
+                        await groq_client.close()
+                    except Exception as close_err:
+                        logger.warning(f"Failed to close Groq API client connection for key {masked_groq}: {close_err}")
+
+                    if ai_reply is not None:
+                        break
+                    
+                    if key_error_triggered:
+                        continue
+
+        if ai_reply is None:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"All Gemini API keys and models failed. Last error: {str(last_exception)}"
+                detail=f"All Gemini and Groq API keys and models failed. Last error: {str(last_exception)}"
             )
-        
-        ai_reply = response.text or "Xin lỗi, tôi không thể xử lý câu hỏi này lúc này."
         
         # Lưu cặp tin nhắn (user query & bot response) vào database
         await db_service.save_chat_message(user_token, payload.session_id, payload.query, ai_reply)
@@ -145,10 +208,11 @@ class ChatService:
         Phù hợp cho các tác vụ tiện ích như sinh sơ đồ tư duy (Mindmap) hay thẻ học tập (Flashcard).
         """
         api_keys = get_all_gemini_api_keys()
-        if not api_keys:
+        groq_keys = get_all_groq_api_keys()
+        if not api_keys and not groq_keys:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Gemini API Key is not configured."
+                detail="Neither Gemini nor Groq API Keys are configured on the server."
             )
             
         # 1. Định dạng phụ đề
@@ -225,13 +289,62 @@ class ChatService:
             if key_error_triggered:
                 continue
 
-        if response is None:
+        ai_reply = None
+        if response is not None:
+            ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
+        else:
+            if groq_keys:
+                logger.warning("All Gemini keys and models failed. Initiating fallback to Groq...")
+                groq_messages = [
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": payload.query}
+                ]
+
+                for gk_idx, groq_key in enumerate(groq_keys):
+                    masked_groq = groq_key[:6] + "..." + groq_key[-4:] if len(groq_key) > 10 else "..."
+                    logger.info(f"Attempting fallback chatbot request with Groq API Key #{gk_idx+1}/{len(groq_keys)}: {masked_groq}")
+                    groq_client = AsyncGroq(api_key=groq_key)
+                    key_error_triggered = False
+
+                    for g_idx, groq_model in enumerate(GROQ_MODELS):
+                        try:
+                            if g_idx > 0:
+                                logger.warning(f"Fallback to Groq model {groq_model}...")
+                            logger.info(f"Sending chatbot request to Groq using {groq_model}...")
+                            groq_response = await groq_client.chat.completions.create(
+                                messages=groq_messages,
+                                model=groq_model,
+                                temperature=0.2,
+                            )
+                            if groq_response.choices and groq_response.choices[0].message.content:
+                                ai_reply = groq_response.choices[0].message.content.strip()
+                                break
+                        except Exception as ge:
+                            last_exception = ge
+                            logger.error(f"Error calling Groq in get_raw_gemini_response with {groq_model} using key {masked_groq}: {ge}")
+                            err_msg = str(ge).lower()
+                            if any(x in err_msg for x in ["429", "exhausted", "quota", "limit", "key", "invalid", "401", "403"]):
+                                logger.warning(f"Groq Key-level error detected on key {masked_groq}. Skipping this key...")
+                                key_error_triggered = True
+                                break
+                    
+                    try:
+                        await groq_client.close()
+                    except Exception as close_err:
+                        logger.warning(f"Failed to close Groq API client connection for key {masked_groq}: {close_err}")
+
+                    if ai_reply is not None:
+                        break
+                    
+                    if key_error_triggered:
+                        continue
+
+        if ai_reply is None:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"All Gemini API keys and models failed. Last error: {str(last_exception)}"
+                detail=f"All Gemini and Groq API keys and models failed. Last error: {str(last_exception)}"
             )
         
-        ai_reply = response.text or "Xin lỗi, tôi không thể xử lý yêu cầu lúc này."
         return ChatResponse(response=ai_reply)
 
 def get_chat_service() -> ChatService:

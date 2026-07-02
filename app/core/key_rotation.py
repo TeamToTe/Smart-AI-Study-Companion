@@ -56,3 +56,19 @@ def get_groq_api_key() -> str:
             
     # Fallback to single key
     return os.getenv("GROQ_API_KEY", "")
+
+def get_all_groq_api_keys() -> list[str]:
+    """
+    Returns a list of all configured Groq API keys, shuffled randomly.
+    """
+    keys_str = os.getenv("GROQ_API_KEYS")
+    keys = []
+    if keys_str:
+        keys = [k.strip() for k in keys_str.split(",") if k.strip()]
+    
+    single_key = os.getenv("GROQ_API_KEY", "")
+    if single_key and single_key not in keys:
+        keys.append(single_key)
+        
+    random.shuffle(keys)
+    return keys
