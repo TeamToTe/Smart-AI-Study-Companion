@@ -3,6 +3,38 @@ import { CheckCircle2, XCircle, RotateCcw, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './QuizKit.css';
 
+const containsExceptionInfo = (q) => {
+  if (!q || typeof q !== 'object') return true;
+  const question = String(q.question || '').toLowerCase();
+  const explanation = String(q.explanation || '').toLowerCase();
+  const optionsStr = Array.isArray(q.options) ? q.options.join(' ').toLowerCase() : '';
+  
+  const errorKeywords = [
+    "api keys and models failed",
+    "failed. last error:",
+    "failed to fetch",
+    "error calling gemini",
+    "error calling groq",
+    "api key is not configured",
+    "keys and models failed"
+  ];
+  
+  return errorKeywords.some(keyword => 
+    question.includes(keyword) || 
+    explanation.includes(keyword) || 
+    optionsStr.includes(keyword)
+  );
+};
+
+const isValidQuizArray = (arr) => {
+  if (!Array.isArray(arr) || arr.length === 0) return false;
+  return arr.every(q => {
+    if (!q || typeof q !== 'object') return false;
+    if (!q.question || !Array.isArray(q.options) || q.options.length === 0 || q.correct === undefined || !q.explanation) return false;
+    return !containsExceptionInfo(q);
+  });
+};
+
 export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
   const { session } = useAuth();
   const [questions, setQuestions] = useState([]);
@@ -26,13 +58,15 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
         if (cachedQuizStr) {
           try {
             const cachedQuiz = JSON.parse(cachedQuizStr);
-            if (cachedQuiz && cachedQuiz.length > 0) {
+            if (isValidQuizArray(cachedQuiz)) {
               setQuestions(cachedQuiz);
               setSelectedAnswers(new Array(cachedQuiz.length).fill(null));
               setSubmittedStates(new Array(cachedQuiz.length).fill(false));
               setLoading(false);
               setError(null);
               return; // Skip fetching from API
+            } else {
+              localStorage.removeItem(cacheKey);
             }
           } catch (e) {
             console.error("Failed to parse cached quiz:", e);
@@ -92,7 +126,7 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
         cleanedJson = cleanedJson.trim();
 
         const parsedQuiz = JSON.parse(cleanedJson);
-        if (Array.isArray(parsedQuiz) && parsedQuiz.length > 0) {
+        if (isValidQuizArray(parsedQuiz)) {
           setQuestions(parsedQuiz);
           setSelectedAnswers(new Array(parsedQuiz.length).fill(null));
           setSubmittedStates(new Array(parsedQuiz.length).fill(false));

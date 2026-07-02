@@ -21,6 +21,33 @@ const normalizeLevel = (levelStr) => {
   return 'Remember';
 };
 
+const containsExceptionInfo = (card) => {
+  if (!card || typeof card !== 'object') return true;
+  const front = String(card.front || '').toLowerCase();
+  const back = String(card.back || '').toLowerCase();
+  
+  const errorKeywords = [
+    "api keys and models failed",
+    "failed. last error:",
+    "failed to fetch",
+    "error calling gemini",
+    "error calling groq",
+    "api key is not configured",
+    "keys and models failed"
+  ];
+  
+  return errorKeywords.some(keyword => front.includes(keyword) || back.includes(keyword));
+};
+
+const isValidCardsArray = (arr) => {
+  if (!Array.isArray(arr) || arr.length === 0) return false;
+  return arr.every(card => {
+    if (!card || typeof card !== 'object') return false;
+    if (!card.front || !card.back) return false;
+    return !containsExceptionInfo(card);
+  });
+};
+
 export default function FlashcardKit({ segments, t, videoUrl, lang }) {
   const { session } = useAuth();
   const [cards, setCards] = useState([]);
@@ -41,7 +68,7 @@ export default function FlashcardKit({ segments, t, videoUrl, lang }) {
         if (cachedCardsStr) {
           try {
             const cachedCards = JSON.parse(cachedCardsStr);
-            if (cachedCards && cachedCards.length > 0) {
+            if (isValidCardsArray(cachedCards)) {
               const normalized = cachedCards.map(card => ({
                 ...card,
                 level: normalizeLevel(card.level)
@@ -50,6 +77,8 @@ export default function FlashcardKit({ segments, t, videoUrl, lang }) {
               setLoading(false);
               setError(null);
               return; // Skip fetching from API
+            } else {
+              localStorage.removeItem(cacheKey);
             }
           } catch (e) {
             console.error("Failed to parse cached flashcards:", e);
@@ -115,7 +144,7 @@ export default function FlashcardKit({ segments, t, videoUrl, lang }) {
         cleanedJson = cleanedJson.trim();
 
         const parsedCards = JSON.parse(cleanedJson);
-        if (Array.isArray(parsedCards) && parsedCards.length > 0) {
+        if (isValidCardsArray(parsedCards)) {
           const normalized = parsedCards.map(card => ({
             ...card,
             level: normalizeLevel(card.level)

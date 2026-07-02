@@ -336,7 +336,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
       console.error("Chat API Error:", err);
       const errorMsg = {
         sender: 'bot',
-        text: "Xin lỗi, tôi gặp sự cố khi kết nối với máy chủ AI Tutor. Hãy đảm bảo máy chủ Backend đang chạy và API Key đã được cấu hình chính xác.",
+        text: "Hệ thống hiện đang được bảo trì, bạn thử lại sau nhé.",
         time: new Date()
       };
       setMessages(prev => [...prev, errorMsg]);
