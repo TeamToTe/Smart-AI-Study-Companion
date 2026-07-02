@@ -48,14 +48,19 @@ export default function QuizKit({ segments, t, videoUrl, lang = 'vi' }) {
           headers['Authorization'] = `Bearer ${session.access_token}`;
         }
 
+        // Estimate video length in minutes
+        const durationSeconds = segments.length > 0 ? segments[segments.length - 1].end : 0;
+        const durationMinutes = durationSeconds / 60;
+        const numQuestions = Math.max(3, Math.min(8, Math.floor(3 + durationMinutes / 4)));
+
         const queryPrompt = lang === 'vi'
-          ? "Hãy tạo ra đúng 3 câu hỏi trắc nghiệm kiểm tra kiến thức của bài học này dưới dạng JSON. " +
+          ? `Hãy tạo ra đúng ${numQuestions} câu hỏi trắc nghiệm kiểm tra kiến thức của bài học này dưới dạng JSON. ` +
             "Câu hỏi, các lựa chọn và phần giải thích phải viết bằng tiếng Việt, các thuật ngữ kỹ thuật tiếng Anh gốc giữ nguyên. " +
             "Trả về DUY NHẤT một mảng JSON hợp lệ chứa các đối tượng có cấu trúc chính xác như sau: " +
             "[{\"question\": \"nội dung câu hỏi\", \"options\": [\"lựa chọn A\", \"lựa chọn B\", \"lựa chọn C\", \"lựa chọn D\"], \"correct\": 0, \"explanation\": \"giải thích chi tiết lý do lựa chọn này là đúng\"}]. " +
             "Chú ý: correct phải là một số nguyên (từ 0 đến 3) đại diện cho chỉ mục của đáp án đúng. " +
             "Không bao gồm bất kỳ lời dẫn nào, không bọc trong khối code block markdown, chỉ trả về chuỗi JSON thô."
-          : "Create exactly 3 multiple-choice questions to test the knowledge of this lesson in JSON format. " +
+          : `Create exactly ${numQuestions} multiple-choice questions to test the knowledge of this lesson in JSON format. ` +
             "The questions, options, and explanations must be written in English. " +
             "Return ONLY a valid JSON array containing objects with the exact structure: " +
             "[{\"question\": \"question content\", \"options\": [\"option A\", \"option B\", \"option C\", \"option D\"], \"correct\": 0, \"explanation\": \"detailed explanation of why this option is correct\"}]. " +
