@@ -34,17 +34,17 @@
 
 /* Glassmorphism theme integration */
 .theme-dark .auth-modal-container {
-  background: rgba(11, 15, 25, 0.85);
+  background: rgba(11, 15, 25, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .theme-light .auth-modal-container {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.15);
 }
 
 /* Decorative Glow Rings */
@@ -185,42 +185,66 @@
   position: relative;
   display: flex;
   align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 14px;
-  color: var(--text-muted);
-  pointer-events: none;
-  transition: color var(--transition-fast);
-}
-
-.input-wrapper input {
   width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm) 42px;
   border-radius: var(--rounded-md);
   border: 1px solid var(--border-color);
   background-color: var(--bg-surface);
+  transition: all var(--transition-fast);
+  padding: 0 16px;
+  height: 46px;
+  box-sizing: border-box;
+}
+
+.input-icon {
+  position: static;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: color var(--transition-fast);
+  margin-right: 12px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper input {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
   color: var(--text-primary);
   font-size: 0.95rem;
   font-family: var(--font-family);
-  transition: all var(--transition-fast);
+  padding: 0;
+  box-shadow: none !important;
+  box-sizing: border-box;
 }
 
-.input-wrapper input:focus {
+.input-wrapper input:-webkit-autofill,
+.input-wrapper input:-webkit-autofill:hover,
+.input-wrapper input:-webkit-autofill:focus,
+.input-wrapper input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-surface) inset !important;
+  box-shadow: 0 0 0 1000px var(--bg-surface) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.input-wrapper:focus-within {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(var(--color-accent-rgb), 0.15), var(--shadow-glow-blue);
   background-color: var(--bg-surface);
 }
 
-.input-wrapper input:focus + .input-icon {
+.input-wrapper:focus-within .input-icon {
   color: var(--color-accent);
 }
 
 .eye-toggle-btn {
-  position: absolute;
-  right: 14px;
+  position: static;
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -230,6 +254,8 @@
   align-items: center;
   justify-content: center;
   transition: color var(--transition-fast);
+  margin-left: 12px;
+  flex-shrink: 0;
 }
 
 .eye-toggle-btn:hover {
@@ -262,7 +288,7 @@
 .auth-submit-btn {
   width: 100%;
   padding: var(--spacing-sm);
-  border-radius: var(--rounded-sm);
+  border-radius: var(--rounded-md);
   border: none;
   background: var(--gradient-accent);
   color: #ffffff;
