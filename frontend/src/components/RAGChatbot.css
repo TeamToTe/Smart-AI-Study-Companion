@@ -319,4 +319,51 @@
   border: 1px dashed var(--border-color);
 }
 
+/* Word counter and error styles */
+.chat-input-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.chat-input-wrapper .chat-input {
+  width: 100%;
+  padding-right: 90px; /* Leave space for counter badge */
+}
+
+.chat-word-counter {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--text-muted);
+  pointer-events: none;
+  background: var(--bg-main);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.chat-word-counter.exceeded {
+  color: var(--color-danger);
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+  font-weight: 700;
+}
+
+.chat-input.input-error {
+  border-color: var(--color-danger) !important;
+}
+
+.chat-input-error-msg {
+  color: var(--color-danger);
+  font-size: 12px;
+  padding: 6px 16px;
+  background: rgba(239, 68, 68, 0.05);
+  border-top: 1px solid rgba(239, 68, 68, 0.15);
+  animation: fadeIn var(--transition-fast) ease-out;
+}
+
 

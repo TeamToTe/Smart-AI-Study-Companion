@@ -8,7 +8,7 @@ class ChatSegment(BaseModel):
 
 class ChatRequest(BaseModel):
     session_id: str = Field(..., description="ID phiên chat trong cơ sở dữ liệu")
-    query: str = Field(..., description="Câu hỏi hiện tại của người học")
+    query: str = Field(..., max_length=2000, description="Câu hỏi hiện tại của người học")
     segments: List[ChatSegment] = Field(..., description="Danh sách các đoạn phụ đề của bài giảng")
 
 class ChatResponse(BaseModel):
@@ -24,6 +24,6 @@ class ChatHistoryResponse(BaseModel):
     messages: List[HistoryMessage] = Field(..., description="Lịch sử các tin nhắn")
 
 class RawChatRequest(BaseModel):
-    query: str = Field(..., description="Câu hỏi hoặc prompt gửi tới Gemini")
+    query: str = Field(..., max_length=2000, description="Câu hỏi hoặc prompt gửi tới Gemini")
     segments: List[ChatSegment] = Field(..., description="Danh sách các đoạn phụ đề của bài giảng")
 
