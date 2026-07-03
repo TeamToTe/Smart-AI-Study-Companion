@@ -59,12 +59,12 @@ export const LOCALIZATION = {
     wordLimitExceeded: "Your question cannot exceed 2000 characters. Please shorten your input.",
     wordsCount: "characters",
     // Loader Steps
-    loaderStep1: "Validating YouTube video details...",
-    loaderStep2: "Checking for pre-existing English / Vietnamese subtitles...",
-    loaderStep3: "Fallback: Accessing audio stream (skip download)...",
-    loaderStep4: "Uploading audio stream to Gemini File API...",
-    loaderStep5: "Running Speech-to-Text via Gemini Flash (preserving academic glossary)...",
-    loaderStep6: "Splitting transcript & building semantic vector index..."
+    loaderStep1: "Checking video details...",
+    loaderStep2: "Checking for available subtitles to speed up load...",
+    loaderStep3: "Extracting audio content from the lecture...",
+    loaderStep4: "Feeding lecture data to your AI assistant...",
+    loaderStep5: "AI is listening and learning the lecture content...",
+    loaderStep6: "StudyMind is preparing your study kits, mindmaps, and flashcards..."
   },
   vi: {
     appName: "StudyMind",
@@ -125,11 +125,11 @@ export const LOCALIZATION = {
     wordLimitExceeded: "Câu hỏi của bạn không được vượt quá 2000 ký tự. Vui lòng rút ngắn nội dung.",
     wordsCount: "ký tự",
     // Loader Steps
-    loaderStep1: "Đang xác thực thông tin liên kết YouTube...",
-    loaderStep2: "Kiểm tra sự tồn tại của phụ đề tiếng Anh / tiếng Việt gốc...",
-    loaderStep3: "Dự phòng: Trích xuất luồng âm thanh từ video (bất đồng bộ)...",
-    loaderStep4: "Đang tải tệp âm thanh lên Gemini File API...",
-    loaderStep5: "Khởi chạy Gemini Flash Audio Speech-to-Text (bảo vệ glossary thuật ngữ)...",
-    loaderStep6: "Phân mảnh văn bản (chunking) & tạo lập Vector Index..."
+    loaderStep1: "Đang kiểm tra thông tin đường dẫn video bài giảng...",
+    loaderStep2: "Đang tìm phụ đề có sẵn để tối ưu hóa tốc độ tải...",
+    loaderStep3: "Đang trích xuất nội dung âm thanh của bài học...",
+    loaderStep4: "Đang nạp dữ liệu bài giảng cho trợ lý AI...",
+    loaderStep5: "Trí tuệ nhân tạo AI đang lắng nghe và đọc hiểu bài học...",
+    loaderStep6: "StudyMind đang hoàn tất hệ thống bài tập, sơ đồ tư duy và flashcard..."
   }
 };

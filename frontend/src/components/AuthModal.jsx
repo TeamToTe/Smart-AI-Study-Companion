@@ -54,6 +54,7 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi', initialMode = 
         errorEmptyFields: "Please fill in all fields.",
         successResetSent: "Reset link sent! Please check your email inbox.",
         successSignUp: "Registration successful! You can now sign in.",
+        errorInvalidEmail: "Invalid email format (e.g. name@example.com)",
         errorGeneral: "An error occurred. Please try again."
       },
       vi: {
@@ -84,6 +85,7 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi', initialMode = 
         errorEmptyFields: "Vui lòng nhập đầy đủ các trường thông tin.",
         successResetSent: "Link khôi phục đã gửi! Vui lòng kiểm tra email của bạn.",
         successSignUp: "Đăng ký thành công! Hiện tại bạn có thể đăng nhập.",
+        errorInvalidEmail: "Định dạng email không hợp lệ (Ví dụ: ten@vi-du.com)",
         errorGeneral: "Đã xảy ra lỗi. Vui lòng thử lại."
       }
     };
@@ -106,6 +108,14 @@ export default function AuthModal({ isOpen, onClose, lang = 'vi', initialMode = 
     if (mode !== 'update-password' && !email) {
       setErrorMsg(t('errorEmptyFields'));
       return;
+    }
+
+    if (mode !== 'update-password') {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(email)) {
+        setErrorMsg(t('errorInvalidEmail'));
+        return;
+      }
     }
 
     if (mode !== 'forgot' && !password) {

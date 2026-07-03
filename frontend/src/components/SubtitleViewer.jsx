@@ -46,7 +46,7 @@ function smoothScrollTo(element, target, duration = 250) {
   requestAnimationFrame(animateScroll);
 }
 
-export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc, onHoverDomainWord, setPauseTrigger }) {
+export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang, videoOverlayCc, setVideoOverlayCc, onHoverDomainWord, setPauseTrigger, subMode, setSubMode }) {
   const { session } = useAuth();
   const [activeIdx, setActiveIdx] = useState(-1);
   const [autoScroll, setAutoScroll] = useState(() => {
@@ -337,7 +337,29 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
           <ShieldCheck size={18} className="shield-icon" />
           <span>{t('academicEntityProtection')}</span>
         </div>
-        <div className="toolbar-controls" style={{ display: 'flex', gap: '8px' }}>
+        <div className="toolbar-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <select 
+            value={subMode} 
+            onChange={(e) => setSubMode(e.target.value)} 
+            className="sub-mode-select btn-secondary"
+            title="Subtitle Language Mode"
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-primary)',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              fontWeight: 500,
+              height: '32px',
+              outline: 'none'
+            }}
+          >
+            <option value="vi">{lang === 'vi' ? 'Tiếng Việt' : 'Vietnamese'}</option>
+            <option value="en">{lang === 'vi' ? 'Tiếng Anh' : 'English'}</option>
+            <option value="bilingual">{lang === 'vi' ? 'Song ngữ' : 'Bilingual'}</option>
+          </select>
           <button 
             className={`sync-btn btn-secondary ${videoOverlayCc ? 'active' : ''}`}
             onClick={() => setVideoOverlayCc(!videoOverlayCc)}
@@ -385,16 +407,18 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
                   ) : (
                     <>
                       {/* Original English Text (Entity-Protected) */}
-                      <p 
-                        className="sub-text-en" 
-                        onDoubleClick={(e) => handleSubtitleDoubleClick(e)} 
-                        onClick={(e) => e.stopPropagation()} 
-                        title="Double click to look up word"
-                      >
-                        {renderHighlightedText(seg.original_text || seg.text, seg.domain_words)}
-                      </p>
+                      {(subMode === 'en' || subMode === 'bilingual') && (
+                        <p 
+                          className="sub-text-en" 
+                          onDoubleClick={(e) => handleSubtitleDoubleClick(e)} 
+                          onClick={(e) => e.stopPropagation()} 
+                          title="Double click to look up word"
+                        >
+                          {renderHighlightedText(seg.original_text || seg.text, seg.domain_words)}
+                        </p>
+                      )}
                       {/* Vietnamese Context-aware Translation */}
-                      {lang === 'vi' && (
+                      {(subMode === 'vi' || subMode === 'bilingual') && lang === 'vi' && (
                         <p 
                           className="sub-text-vi" 
                           onDoubleClick={(e) => handleSubtitleDoubleClick(e)} 
