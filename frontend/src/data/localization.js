@@ -56,6 +56,8 @@ export const LOCALIZATION = {
     feature4Desc: "Generate visual concept graphs dynamically linked to key timestamps in the video.",
     confirmDeleteVideo: "Are you sure you want to delete this video from your history?",
     confirmClearHistory: "Are you sure you want to clear all your study history and cached data?",
+    wordLimitExceeded: "Your question cannot exceed 2000 characters. Please shorten your input.",
+    wordsCount: "characters",
     // Loader Steps
     loaderStep1: "Validating YouTube video details...",
     loaderStep2: "Checking for pre-existing English / Vietnamese subtitles...",
@@ -120,6 +122,8 @@ export const LOCALIZATION = {
     feature4Desc: "Tạo biểu đồ tư duy trực quan liên kết trực tiếp tới các phân cảnh chính của video.",
     confirmDeleteVideo: "Bạn có chắc chắn muốn xóa video này khỏi lịch sử học tập?",
     confirmClearHistory: "Bạn có chắc chắn muốn xóa toàn bộ lịch sử học tập và dữ liệu lưu trữ không?",
+    wordLimitExceeded: "Câu hỏi của bạn không được vượt quá 2000 ký tự. Vui lòng rút ngắn nội dung.",
+    wordsCount: "ký tự",
     // Loader Steps
     loaderStep1: "Đang xác thực thông tin liên kết YouTube...",
     loaderStep2: "Kiểm tra sự tồn tại của phụ đề tiếng Anh / tiếng Việt gốc...",
