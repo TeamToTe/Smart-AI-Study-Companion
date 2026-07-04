@@ -21,11 +21,11 @@
 
 .tabs-header-bar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   background: rgba(0, 0, 0, 0.15);
   border-bottom: 1px solid var(--border-color);
-  padding: 4px;
-  gap: 2px;
+  padding: 6px;
+  gap: 4px;
 }
 
 .tab-header-btn {
@@ -43,7 +43,17 @@
   gap: 4px;
   transition: all var(--transition-fast);
   outline: none;
+  grid-column: span 2;
 }
+
+.tab-header-btn:nth-child(4) {
+  grid-column: 2 / span 2;
+}
+
+.tab-header-btn:nth-child(5) {
+  grid-column: 4 / span 2;
+}
+
 
 .tab-header-btn:hover {
   color: var(--text-primary);

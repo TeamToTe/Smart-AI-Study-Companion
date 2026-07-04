@@ -471,7 +471,7 @@ export default function VideoPlayer({ url, onProgress, seekTime, segments, curre
                   {renderHighlightedText(activeSegment.original_text || activeSegment.text, activeSegment.domain_words)}
                 </p>
               )}
-              {(subMode === 'vi' || subMode === 'bilingual') && lang === 'vi' && (
+              {(subMode === 'vi' || subMode === 'bilingual') && (
                 <p className="caption-vi">
                   {renderHighlightedText(activeSegment.original_text ? activeSegment.text : getMockTranslationForOverlay(activeSegment.text), activeSegment.domain_words)}
                 </p>
