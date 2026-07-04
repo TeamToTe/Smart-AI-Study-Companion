@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.transcribe import router as transcribe_router
 from app.api.chat import router as chat_router
 from app.api.glossary import router as glossary_router
+from app.api.share import router as share_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,6 +35,7 @@ app.add_middleware(
 app.include_router(transcribe_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(glossary_router, prefix="/api")
+app.include_router(share_router, prefix="/api")
 
 @app.get("/health", tags=["health"])
 def health_check():

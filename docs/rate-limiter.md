@@ -2,6 +2,30 @@
 
 Hệ thống **Smart AI Study Companion** tích hợp một bộ giới hạn tần suất phân tán (Distributed Rate Limiter) sử dụng thuật toán **Token Bucket** (Thùng chứa thẻ) được lưu trữ trên **Redis** và điều phối bằng mã **Lua Script**.
 
+## Sơ đồ tổng quan (High-Level Overview)
+
+```mermaid
+graph TD
+    %% Styling
+    classDef worker fill:#f96,stroke:#333,stroke-width:2px;
+    classDef redis fill:#bfb,stroke:#333,stroke-width:2px;
+    classDef api fill:#bbf,stroke:#333,stroke-width:2px;
+    
+    W1["Celery Worker A"]:::worker
+    W2["Celery Worker B"]:::worker
+    RedisLimiter[("Redis Rate Limiter<br/>(Token Bucket)")]:::redis
+    GroqAPI["Groq Translation API"]:::api
+
+    W1 -->|1. Yêu cầu Token| RedisLimiter
+    W2 -->|1. Yêu cầu Token| RedisLimiter
+    
+    RedisLimiter -->|Đủ Token: Cho phép| W1
+    RedisLimiter -.->|Hết Token: Từ chối| W2
+    
+    W1 -->|2. Gọi API dịch| GroqAPI
+    Note over W2: Thử lại sau 5 giây<br/>(Đẩy lại vào Celery Queue)
+```
+
 ---
 
 ## 1. Tại sao cần Rate Limiter phân tán?
@@ -76,7 +100,7 @@ Trong file [app/tasks/transcription_tasks.py](file:///D:/FPT/SU26/CODE_INSPIRATI
        logger.info("Groq API rate limit reached in Redis. Retrying translation task...")
        raise self.retry(countdown=5)
    ```
-   * Nếu Redis trả về `False` (hết token), task sẽ gọi `self.retry(countdown=5)` để đẩy ngược task lại vào hàng đợi Celery và thử lại sau 5 giây.
+    * Nếu Redis trả về `False` (hết token), task sẽ gọi `self.retry(countdown=5)` để đẩy ngược task lại vào hàng đợi Celery và thử lại sau 5 giây.
 
 ---
 

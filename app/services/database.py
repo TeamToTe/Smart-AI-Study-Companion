@@ -177,3 +177,207 @@ class DatabaseService:
                     logger.error(f"Failed to save glossary term. Status: {res.status_code}, Body: {res.text}")
             except Exception as e:
                 logger.error(f"Error saving glossary term to Supabase: {e}")
+
+    async def create_shared_transcript(self, owner_id: str, share_token: str, payload) -> dict:
+        headers = self._get_headers()
+        headers_with_prefer = headers.copy()
+        headers_with_prefer["Prefer"] = "return=representation"
+        
+        meta_payload = {
+            "share_token": share_token,
+            "owner_id": owner_id,
+            "video_url": str(payload.video_url),
+            "video_title": payload.video_title,
+            "video_duration_seconds": payload.video_duration_seconds,
+            "license_type": payload.license_type,
+            "attribution_name": payload.attribution_name or owner_id,
+            "is_public": payload.is_public
+        }
+        
+        async with httpx.AsyncClient() as client:
+            meta_url = f"{self.supabase_url}/rest/v1/shared_transcripts"
+            res = await client.post(meta_url, headers=headers_with_prefer, json=meta_payload)
+            if res.status_code not in (200, 201):
+                logger.error(f"Failed to create shared transcript meta. Status: {res.status_code}, Body: {res.text}")
+                raise Exception(f"Failed to create shared transcript metadata in Supabase: {res.text}")
+            
+            created_meta = res.json()[0]
+            shared_transcript_id = created_meta["id"]
+            
+            segments_payload = []
+            for seg in payload.segments:
+                segments_payload.append({
+                    "shared_transcript_id": shared_transcript_id,
+                    "start_time": seg.start_time,
+                    "end_time": seg.end_time,
+                    "original_text": seg.original_text,
+                    "translated_text": seg.translated_text,
+                    "highlights": seg.highlights,
+                    "sequence_number": seg.sequence_number
+                })
+            
+            if segments_payload:
+                seg_url = f"{self.supabase_url}/rest/v1/shared_transcript_segments"
+                seg_res = await client.post(seg_url, headers=headers, json=segments_payload)
+                if seg_res.status_code not in (200, 201):
+                    logger.error(f"Failed to insert shared segments. Status: {seg_res.status_code}, Body: {seg_res.text}")
+                    raise Exception(f"Failed to insert shared segments in Supabase: {seg_res.text}")
+            
+            return created_meta
+
+    async def get_shared_transcript_by_token(self, share_token: str) -> Optional[dict]:
+        headers = self._get_headers()
+        async with httpx.AsyncClient() as client:
+            meta_url = f"{self.supabase_url}/rest/v1/shared_transcripts?share_token=eq.{share_token}"
+            res = await client.get(meta_url, headers=headers)
+            if res.status_code != 200:
+                logger.error(f"Failed to query shared_transcripts: {res.text}")
+                return None
+            
+            meta_list = res.json()
+            if not meta_list:
+                return None
+            
+            meta = meta_list[0]
+            shared_transcript_id = meta["id"]
+            
+            seg_url = f"{self.supabase_url}/rest/v1/shared_transcript_segments?shared_transcript_id=eq.{shared_transcript_id}&order=sequence_number.asc"
+            seg_res = await client.get(seg_url, headers=headers)
+            if seg_res.status_code != 200:
+                logger.error(f"Failed to query shared_transcript_segments: {seg_res.text}")
+                meta["segments"] = []
+            else:
+                meta["segments"] = seg_res.json()
+                
+            return meta
+
+    async def get_shared_transcript_metadata_by_token(self, share_token: str) -> Optional[dict]:
+        headers = self._get_headers()
+        async with httpx.AsyncClient() as client:
+            meta_url = f"{self.supabase_url}/rest/v1/shared_transcripts?share_token=eq.{share_token}"
+            res = await client.get(meta_url, headers=headers)
+            if res.status_code != 200:
+                logger.error(f"Failed to query shared_transcripts metadata: {res.text}")
+                return None
+            meta_list = res.json()
+            if not meta_list:
+                return None
+            return meta_list[0]
+
+    async def increment_share_views(self, share_token: str):
+        headers = self._get_headers()
+        async with httpx.AsyncClient() as client:
+            url = f"{self.supabase_url}/rest/v1/shared_transcripts?share_token=eq.{share_token}"
+            res = await client.get(url, headers=headers)
+            if res.status_code == 200:
+                data = res.json()
+                if data:
+                    current_views = data[0].get("views_count", 0)
+                    patch_url = f"{self.supabase_url}/rest/v1/shared_transcripts?id=eq.{data[0]['id']}"
+                    await client.patch(patch_url, headers=headers, json={"views_count": current_views + 1})
+
+    async def increment_share_clones(self, transcript_id: str):
+        headers = self._get_headers()
+        async with httpx.AsyncClient() as client:
+            url = f"{self.supabase_url}/rest/v1/shared_transcripts?id=eq.{transcript_id}"
+            res = await client.get(url, headers=headers)
+            if res.status_code == 200:
+                data = res.json()
+                if data:
+                    current_clones = data[0].get("clones_count", 0)
+                    await client.patch(url, headers=headers, json={"clones_count": current_clones + 1})
+
+    async def upsert_transcript_rating(self, shared_transcript_id: str, user_id: str, rating: int, review_comment: Optional[str]) -> dict:
+        headers = self._get_headers()
+        headers_with_prefer = headers.copy()
+        headers_with_prefer["Prefer"] = "return=representation"
+        
+        select_url = f"{self.supabase_url}/rest/v1/shared_transcript_ratings?shared_transcript_id=eq.{shared_transcript_id}&user_id=eq.{user_id}"
+        async with httpx.AsyncClient() as client:
+            res = await client.get(select_url, headers=headers)
+            exists = False
+            existing_id = None
+            if res.status_code == 200:
+                data = res.json()
+                if data:
+                    exists = True
+                    existing_id = data[0]["id"]
+            
+            payload = {
+                "shared_transcript_id": shared_transcript_id,
+                "user_id": user_id,
+                "rating": rating,
+                "review_comment": review_comment
+            }
+            
+            if exists:
+                patch_url = f"{self.supabase_url}/rest/v1/shared_transcript_ratings?id=eq.{existing_id}"
+                res = await client.patch(patch_url, headers=headers_with_prefer, json=payload)
+            else:
+                insert_url = f"{self.supabase_url}/rest/v1/shared_transcript_ratings"
+                res = await client.post(insert_url, headers=headers_with_prefer, json=payload)
+                
+            if res.status_code not in (200, 201):
+                logger.error(f"Failed to upsert rating. Status: {res.status_code}, Body: {res.text}")
+                raise Exception(f"Failed to upsert rating in Supabase: {res.text}")
+                
+            return res.json()[0]
+
+    async def get_ratings_for_transcript(self, shared_transcript_id: str) -> List[dict]:
+        headers = self._get_headers()
+        url = f"{self.supabase_url}/rest/v1/shared_transcript_ratings?shared_transcript_id=eq.{shared_transcript_id}&order=created_at.desc"
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, headers=headers)
+            if res.status_code == 200:
+                return res.json()
+            logger.error(f"Failed to fetch ratings. Status: {res.status_code}, Body: {res.text}")
+            return []
+
+    async def clone_shared_transcript(self, original_id: str, new_owner_id: str, new_share_token: str, original_data: dict) -> dict:
+        headers = self._get_headers()
+        headers_with_prefer = headers.copy()
+        headers_with_prefer["Prefer"] = "return=representation"
+        
+        meta_payload = {
+            "share_token": new_share_token,
+            "owner_id": new_owner_id,
+            "cloned_from_id": original_id,
+            "video_url": original_data["video_url"],
+            "video_title": original_data["video_title"],
+            "video_duration_seconds": original_data.get("video_duration_seconds"),
+            "license_type": original_data["license_type"],
+            "attribution_name": original_data.get("attribution_name") or new_owner_id,
+            "is_public": False
+        }
+        
+        async with httpx.AsyncClient() as client:
+            meta_url = f"{self.supabase_url}/rest/v1/shared_transcripts"
+            res = await client.post(meta_url, headers=headers_with_prefer, json=meta_payload)
+            if res.status_code not in (200, 201):
+                logger.error(f"Failed to create cloned transcript meta. Status: {res.status_code}, Body: {res.text}")
+                raise Exception(f"Failed to clone transcript metadata in Supabase: {res.text}")
+            
+            created_meta = res.json()[0]
+            new_transcript_id = created_meta["id"]
+            
+            segments_payload = []
+            for seg in original_data.get("segments", []):
+                segments_payload.append({
+                    "shared_transcript_id": new_transcript_id,
+                    "start_time": seg["start_time"],
+                    "end_time": seg["end_time"],
+                    "original_text": seg["original_text"],
+                    "translated_text": seg["translated_text"],
+                    "highlights": seg.get("highlights", []),
+                    "sequence_number": seg["sequence_number"]
+                })
+                
+            if segments_payload:
+                seg_url = f"{self.supabase_url}/rest/v1/shared_transcript_segments"
+                seg_res = await client.post(seg_url, headers=headers, json=segments_payload)
+                if seg_res.status_code not in (200, 201):
+                    logger.error(f"Failed to clone segments. Status: {seg_res.status_code}, Body: {seg_res.text}")
+                    raise Exception(f"Failed to insert cloned segments in Supabase: {seg_res.text}")
+                    
+            return created_meta
+
