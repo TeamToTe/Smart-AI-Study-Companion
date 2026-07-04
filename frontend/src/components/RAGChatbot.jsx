@@ -29,6 +29,20 @@ const CodeBlock = ({ code, language }) => {
   );
 };
 
+const MathBlock = ({ math }) => {
+  const html = window.katex 
+    ? window.katex.renderToString(math, { displayMode: true, throwOnError: false }) 
+    : math;
+  return <div className="chat-math-block" style={{ overflowX: 'auto' }} dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
+const MathInline = ({ math }) => {
+  const html = window.katex 
+    ? window.katex.renderToString(math, { displayMode: false, throwOnError: false }) 
+    : math;
+  return <span className="chat-math-inline" dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
 export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, setChatQuery }) {
   const { session } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -37,6 +51,29 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
   const [loading, setLoading] = useState(false);
   const messagesContainerRef = useRef(null);
   const isLoggedIn = !!session?.access_token;
+  const [katexLoaded, setKatexLoaded] = useState(!!window.katex);
+
+  useEffect(() => {
+    if (window.katex) {
+      setKatexLoaded(true);
+      return;
+    }
+
+    if (!document.getElementById('katex-css')) {
+      const link = document.createElement('link');
+      link.id = 'katex-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
+      document.head.appendChild(link);
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js';
+    script.async = true;
+    script.onload = () => setKatexLoaded(true);
+    script.onerror = () => console.error("Failed to load KaTeX script.");
+    document.body.appendChild(script);
+  }, []);
 
   const charCount = input.length;
 
@@ -119,6 +156,8 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
     let insideCodeBlock = false;
     let codeBlockLines = [];
     let codeLanguage = '';
+    let insideMathBlock = false;
+    let mathBlockLines = [];
 
     // Helper: Parse inline styles (Timestamp, Bold, Inline code)
     const parseInlineStyles = (lineText, lineKey) => {
@@ -163,7 +202,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
 
     // Helper: Parse Bold **bold**, Code `code`, and Math $math$
     const parseBoldAndCode = (inputText, parentKey) => {
-      const regex = /(\*\*.*?\*\*|`.*?`|\$[^\s$]+?\$)/g;
+      const regex = /(\*\*.*?\*\*|`.*?`|\$[^$]+?\$)/g;
       const parts = inputText.split(regex);
       
       return parts.map((part, index) => {
@@ -175,7 +214,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
           return <code key={key} className="chat-inline-code">{part.slice(1, -1)}</code>;
         }
         if (part.startsWith('$') && part.endsWith('$')) {
-          return <span key={key} className="chat-math-inline">{part.slice(1, -1)}</span>;
+          return <MathInline key={key} math={part.slice(1, -1)} />;
         }
         return part;
       });
@@ -225,6 +264,34 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
         continue;
       }
 
+      if (insideMathBlock) {
+        if (trimmedLine.endsWith('$$')) {
+          const finalLine = trimmedLine.slice(0, -2).trim();
+          if (finalLine) mathBlockLines.push(finalLine);
+          renderedElements.push(
+            <MathBlock key={`math-${i}`} math={mathBlockLines.join('\n')} />
+          );
+          insideMathBlock = false;
+          mathBlockLines = [];
+        } else {
+          mathBlockLines.push(line);
+        }
+        continue;
+      }
+
+      if (trimmedLine.startsWith('$$')) {
+        flushList(`flush-list-math-${i}`);
+        if (trimmedLine.endsWith('$$') && trimmedLine.length > 2) {
+          renderedElements.push(
+            <MathBlock key={`math-${i}`} math={trimmedLine.slice(2, -2)} />
+          );
+        } else {
+          insideMathBlock = true;
+          mathBlockLines = [];
+        }
+        continue;
+      }
+
       if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
         if (!insideList) {
           insideList = true;
@@ -239,13 +306,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
       } else {
         flushList(`flush-list-${i}`);
 
-        if (trimmedLine.startsWith('$$') && trimmedLine.endsWith('$$')) {
-          renderedElements.push(
-            <div key={lineKey} className="chat-math-block">
-              {trimmedLine.slice(2, -2)}
-            </div>
-          );
-        } else if (trimmedLine.startsWith('### ')) {
+        if (trimmedLine.startsWith('### ')) {
           renderedElements.push(
             <h4 key={lineKey} className="chat-h4">
               {parseInlineStyles(trimmedLine.substring(4), lineKey)}
@@ -280,6 +341,14 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
           key="code-end" 
           code={codeBlockLines.join('\n')} 
           language={codeLanguage} 
+        />
+      );
+    }
+    if (insideMathBlock && mathBlockLines.length > 0) {
+      renderedElements.push(
+        <MathBlock 
+          key="math-end" 
+          math={mathBlockLines.join('\n')} 
         />
       );
     }

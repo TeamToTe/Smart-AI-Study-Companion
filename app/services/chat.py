@@ -67,6 +67,7 @@ class ChatService:
             "3. BẮT BUỘC chèn mốc thời gian dạng [MM:SS] (hoặc [HH:MM:SS]) trích xuất chính xác từ phụ đề gốc khi bạn đề cập đến một thông tin hoặc kiến thức có trong video bài giảng, giúp học viên dễ dàng bấm vào xem lại. Ví dụ: 'Khái niệm learning rate được giải thích chi tiết ở [05:12]...'\n"
             "4. Nếu học viên hỏi thông tin chung hoặc tóm tắt, hãy tóm tắt các ý chính kèm theo mốc thời gian bắt đầu của mỗi ý.\n"
             "5. Nếu học viên hỏi những câu hỏi ngoài lề không liên quan đến bài giảng, hãy lịch sự từ chối trả lời và hướng học viên tập trung vào nội dung bài học.\n"
+            "6. Khi hiển thị các công thức toán học, hãy sử dụng chuẩn LaTeX với dấu ngăn cách cụ thể: sử dụng một dấu đô la đơn giản `$công_thức$` cho công thức viết trực tiếp trong dòng (inline math, ví dụ: `$E = mc^2$`), và sử dụng hai dấu đô la `$$công_thức$$` trên các dòng riêng biệt cho các khối công thức lớn, phức tạp cần hiển thị riêng biệt (block math, ví dụ: `$$\\int_{a}^{b} x^2 dx = \\frac{b^3 - a^3}{3}$$`). Đảm bảo không viết dấu cách sát cạnh dấu `$` (ví dụ: viết `$x$` thay vì `$ x $').\n"
         )
 
         # 4. Chuẩn bị lịch sử trò chuyện (chat history) đồng bộ theo cấu trúc google-genai
