@@ -451,3 +451,11 @@ input:-webkit-autofill:active {
   border: 1px solid var(--border-color) !important;
   transition: background-color 5000s ease-in-out 0s;
 }
+
+/* Fix option elements visibility in dropdown lists */
+select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+
