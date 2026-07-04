@@ -397,3 +397,29 @@
     transform: rotate(360deg);
   }
 }
+
+.glass-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.glass-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.material-card.active-border {
+  border: 2px solid var(--color-success, #10b981);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+
+.rating-box {
+  margin-top: 20px;
+}
+

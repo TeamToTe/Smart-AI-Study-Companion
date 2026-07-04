@@ -12,7 +12,7 @@ class SegmentShare(BaseModel):
     sequence_number: int = Field(..., ge=0)
 
     model_config = {
-        "extra": "forbid"
+        "extra": "ignore"
     }
 
 class CreateShareRequest(BaseModel):

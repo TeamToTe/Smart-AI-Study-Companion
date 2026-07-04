@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User, Menu, X, HelpCircle, Bell, BellRing, Check, XCircle, RefreshCw } from 'lucide-react';
+import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User, Menu, X, HelpCircle, Bell, BellRing, Check, XCircle, RefreshCw, Unlock, Share2, Star, Lock } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import SkeletonLoader from './components/SkeletonLoader';
 import VideoPlayer from './components/VideoPlayer';
@@ -32,6 +32,13 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [seekTime, setSeekTime] = useState(null);
   const [segments, setSegments] = useState([]);
+  const [originalSegments, setOriginalSegments] = useState(null);
+  const [sharedMeta, setSharedMeta] = useState(null);
+  const [existingTranslations, setExistingTranslations] = useState([]);
+  const [showExistingModal, setShowExistingModal] = useState(false);
+  const [pendingLicenseMaterial, setPendingLicenseMaterial] = useState(null);
+  const [agreedToLandingLicense, setAgreedToLandingLicense] = useState(false);
+  const [submittedUrlCache, setSubmittedUrlCache] = useState('');
   const [activeTab, setActiveTab] = useState(() => {
     return sessionStorage.getItem('studymind_active_tab') || 'chat';
   });
@@ -233,8 +240,14 @@ export default function App() {
     const path = window.location.pathname;
     const params = new URLSearchParams(window.location.search);
     const videoUrl = params.get('v');
+    const shareToken = params.get('share_token');
 
-    if (path === '/video' && videoUrl) {
+    if (shareToken) {
+      setCurrentPath('/video');
+      setTimeout(() => {
+        loadSharedTranscriptToken(shareToken);
+      }, 150);
+    } else if (path === '/video' && videoUrl) {
       setCurrentPath('/video');
       setTimeout(() => {
         handleUrlSubmit(videoUrl);
@@ -263,16 +276,20 @@ export default function App() {
       const path = window.location.pathname;
       const params = new URLSearchParams(window.location.search);
       const videoUrl = params.get('v');
+      const shareToken = params.get('share_token');
       
       setCurrentPath(path);
       
-      if (path === '/video' && videoUrl) {
+      if (shareToken) {
+        loadSharedTranscriptToken(shareToken);
+      } else if (path === '/video' && videoUrl) {
         if (url !== videoUrl) {
           handleUrlSubmit(videoUrl);
         }
       } else {
         setUrl('');
         setSegments([]);
+        setSharedMeta(null);
         setCurrentTime(0);
         setActiveTab('chat');
         setLoading(false);
@@ -335,6 +352,179 @@ export default function App() {
     return true;
   };
 
+
+  const handleLandingPageSubmit = async (submittedUrl) => {
+    setSubmittedUrlCache(submittedUrl);
+    
+    let urlToProcess = submittedUrl;
+    const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]{11}).*/;
+    const match = submittedUrl.match(reg);
+    if (match && match[2] && match[2].length === 11) {
+      urlToProcess = `https://www.youtube.com/watch?v=${match[2]}`;
+    }
+
+    setLoading(true);
+    setProgress(15);
+    try {
+      const response = await fetch(`/api/shares/transcripts?video_url=${encodeURIComponent(urlToProcess)}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          setExistingTranslations(data);
+          setShowExistingModal(true);
+          setLoading(false);
+          setProgress(0);
+        } else {
+          handleUrlSubmit(submittedUrl);
+        }
+      } else {
+        handleUrlSubmit(submittedUrl);
+      }
+    } catch (err) {
+      console.error("Error checking existing translations:", err);
+      handleUrlSubmit(submittedUrl);
+    }
+  };
+
+  const handleSelectExistingTranslation = (mat) => {
+    if (user && mat.owner_id === user.id) {
+      setShowExistingModal(false);
+      loadSharedTranscriptToken(mat.share_token);
+    } else {
+      setPendingLicenseMaterial(mat);
+      setAgreedToLandingLicense(false);
+    }
+  };
+
+  const handleConfirmLandingLicense = async () => {
+    if (!agreedToLandingLicense || !pendingLicenseMaterial) return;
+
+    const token = pendingLicenseMaterial.share_token;
+    setPendingLicenseMaterial(null);
+    setShowExistingModal(false);
+
+    if (session) {
+      setLoading(true);
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (session.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        await fetch(`/api/shares/transcripts/${token}/clone`, {
+          method: 'POST',
+          headers: headers
+        });
+      } catch (err) {
+        console.error('Cloning failed, fallback:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadSharedTranscriptToken(token);
+  };
+
+  const handleForceNewTranslation = () => {
+    setShowExistingModal(false);
+    setPendingLicenseMaterial(null);
+    handleUrlSubmit(submittedUrlCache);
+  };
+
+  const getLicenseDescription = (lic) => {
+    switch (lic) {
+      case 'CC0':
+        return lang === 'vi' 
+          ? 'CC0: Tác giả từ bỏ mọi quyền tác giả, chuyển tác phẩm vào miền công cộng. Cho phép sao chép, sửa đổi, phân phối tự do cho mọi mục đích.'
+          : 'CC0: Creator waives all copyright, placing the work in the public domain. Copy, modify, and distribute freely for any purpose.';
+      case 'CC-BY':
+        return lang === 'vi' 
+          ? 'CC-BY: Cho phép chia sẻ, sửa đổi cho mọi mục đích (thương mại/phi thương mại) nhưng phải ghi danh tác giả.' 
+          : 'CC-BY: Share and adapt freely, even commercially, with attribution to the author.';
+      case 'CC-BY-SA':
+        return lang === 'vi' 
+          ? 'CC-BY-SA: Cho phép sửa đổi, chia sẻ nhưng các tác phẩm phái sinh phải áp dụng cùng giấy phép này và ghi danh tác giả.'
+          : 'CC-BY-SA: Share and adapt, but new creations must be licensed under identical terms and attribute the author.';
+      case 'CC-BY-NC':
+        return lang === 'vi' 
+          ? 'CC-BY-NC: Cho phép chia sẻ, sửa đổi nhưng chỉ cho mục đích phi thương mại và phải ghi danh tác giả.' 
+          : 'CC-BY-NC: Share and adapt with attribution, strictly for non-commercial purposes only.';
+      case 'CC-BY-NC-SA':
+        return lang === 'vi' 
+          ? 'CC-BY-NC-SA: Cho phép sửa đổi, chia sẻ cho mục đích phi thương mại, yêu cầu ghi danh tác giả và áp dụng cùng giấy phép.'
+          : 'CC-BY-NC-SA: Share and adapt with attribution, strictly for non-commercial purposes under identical terms.';
+      case 'CC-BY-ND':
+        return lang === 'vi' 
+          ? 'CC-BY-ND: Cho phép sao chép chia sẻ tác phẩm nguyên bản, cấm sửa đổi phái sinh, phải ghi danh tác giả.' 
+          : 'CC-BY-ND: Copy and distribute original work with attribution, no modifications allowed.';
+      case 'CC-BY-NC-ND':
+        return lang === 'vi' 
+          ? 'CC-BY-NC-ND: Cho phép chia sẻ tác phẩm nguyên bản phi thương mại, cấm sửa đổi phái sinh, phải ghi danh tác giả.'
+          : 'CC-BY-NC-ND: Share original work for non-commercial purposes with attribution, no modifications allowed.';
+      default:
+        return lic;
+    }
+  };
+
+  const loadSharedTranscriptToken = async (shareToken) => {
+    setLoading(true);
+    setProgress(20);
+    try {
+      const response = await fetch(`/api/shares/transcripts/${shareToken}`);
+      if (!response.ok) {
+        throw new Error(lang === 'vi' ? 'Không tìm thấy hoặc không thể truy cập bản dịch chia sẻ.' : 'Shared transcript not found or inaccessible.');
+      }
+      const data = await response.json();
+      setProgress(60);
+      
+      const mappedSegments = (data.segments || []).map(seg => ({
+        start: Number(seg.start_time),
+        end: Number(seg.end_time),
+        text: seg.translated_text,
+        original_text: seg.original_text,
+        highlights: seg.highlights || []
+      }));
+
+      setProgress(90);
+      const videoUrl = data.video_url;
+      setUrl(videoUrl);
+      setSegments(mappedSegments);
+      setSharedMeta(data);
+      setIsProcessed(true);
+      
+      sessionStorage.setItem('studymind_current_share_token', shareToken);
+      sessionStorage.setItem('studymind_current_share_owner', data.owner_id);
+      if (data.cloned_from_id) {
+        sessionStorage.setItem('studymind_current_share_cloned_from', data.cloned_from_id);
+      } else {
+        sessionStorage.removeItem('studymind_current_share_cloned_from');
+      }
+
+      if (user) {
+        addToHistory(videoUrl, data.video_title);
+      }
+
+      window.history.pushState({}, '', `/video?v=${encodeURIComponent(videoUrl)}&share_token=${shareToken}`);
+      setCurrentPath('/video');
+      setActiveTab('share');
+    } catch (err) {
+      console.error(err);
+      setModalConfig({
+        isOpen: true,
+        title: lang === 'vi' ? 'Lỗi Tải Bản Dịch' : 'Load Error',
+        message: err.message,
+        confirmText: 'OK',
+        showCancel: false,
+        onConfirm: () => {
+          setModalConfig(prev => ({ ...prev, isOpen: false }));
+          handleBackToLanding();
+        }
+      });
+    } finally {
+      setLoading(false);
+      setProgress(0);
+    }
+  };
+
   // 5. Handle Video Submission & API calls
   const handleUrlSubmit = async (submittedUrl) => {
     // Sanitize YouTube URL (e.g., extract video ID and strip playlist or time parameters)
@@ -390,6 +580,8 @@ export default function App() {
     setIsProcessed(false);
     setPendingWorkspaceData(null);
     setSegments([]);
+    setOriginalSegments(null);
+    setSharedMeta(null);
     setProgress(0);
 
     // Redirect to /video immediately so user sees the progress screen from 0%
@@ -689,8 +881,13 @@ export default function App() {
   const handleBackToLanding = () => {
     setUrl('');
     setSegments([]);
+    setOriginalSegments(null);
+    setSharedMeta(null);
     setCurrentTime(0);
     setActiveTab('chat');
+    sessionStorage.removeItem('studymind_current_share_token');
+    sessionStorage.removeItem('studymind_current_share_owner');
+    sessionStorage.removeItem('studymind_current_share_cloned_from');
     // Navigate back to /
     window.history.pushState({}, '', '/');
     setCurrentPath('/');
@@ -904,7 +1101,7 @@ export default function App() {
       <main className="main-content">
         {currentPath !== '/video' ? (
           <LandingPage 
-            onSubmit={handleUrlSubmit} 
+            onSubmit={handleLandingPageSubmit} 
             history={history}
             onDeleteHistory={deleteHistoryItem}
             onClearHistory={clearHistory}
@@ -927,6 +1124,16 @@ export default function App() {
                 <ArrowLeft size={16} />
                 <span>{t('backToLanding')}</span>
               </button>
+              {sharedMeta && (
+                <div className="shared-meta-banner glass">
+                  <Unlock size={14} className="text-success" style={{ marginRight: '6px' }} />
+                  <span>
+                    {lang === 'vi' 
+                      ? `Đang xem bản dịch chia sẻ bởi ${sharedMeta.attribution_name || 'tác giả'} (${sharedMeta.license_type})`
+                      : `Viewing translation shared by ${sharedMeta.attribution_name || 'author'} (${sharedMeta.license_type})`}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="workspace-grid">
@@ -979,9 +1186,13 @@ export default function App() {
                       videoUrl={url} 
                       videoTitle={pendingWorkspaceData?.title} 
                       segments={segments} 
-                      currentRole={currentRole} 
-                      userEmail={demoEmail} 
-                      onLoadSegments={(newSegs) => setSegments(newSegs)} 
+                      onLoadSegments={(newSegs) => {
+                        if (!originalSegments && segments && segments.length > 0) {
+                          setOriginalSegments(segments);
+                        }
+                        setSegments(newSegs);
+                      }} 
+                      onUnloadSegments={handleBackToLanding}
                       lang={lang} 
                       t={t} 
                     />
@@ -1044,6 +1255,163 @@ export default function App() {
         lang={lang} 
         initialMode={authModalMode}
       />
+
+      {/* Existing Translations Selection Modal */}
+      {showExistingModal && (
+        <div className="modal-overlay glass">
+          <div className="modal-content glass-panel animate-pop-in" style={{ maxWidth: '600px', width: '90%' }}>
+            <div className="modal-header">
+              <Share2 size={22} className="text-gradient-icon" />
+              <h3>{lang === 'vi' ? 'Bản Dịch Cộng Đồng Có Sẵn' : 'Community Translations Available'}</h3>
+            </div>
+            
+            <div className="modal-body">
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
+                {lang === 'vi' 
+                  ? 'Hệ thống phát hiện video bài giảng này đã có sẵn các bản dịch do cộng đồng đóng góp. Bạn có thể sử dụng bản dịch sẵn có (tiết kiệm thời gian và hạn ngạch API) hoặc chọn dịch lại từ đầu.'
+                  : 'We found community translations for this lecture video. You can use an existing translation to save time and API quota, or start a new translation from scratch.'}
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '280px', overflowY: 'auto', marginBottom: '20px', paddingRight: '4px' }}>
+                {existingTranslations.map((mat) => {
+                  const isOwner = user && mat.owner_id === user.id;
+                  return (
+                    <div 
+                      key={mat.id} 
+                      className="glass" 
+                      style={{ 
+                        padding: '12px 16px', 
+                        borderRadius: '10px', 
+                        border: '1px solid var(--border-color)', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        background: 'rgba(255, 255, 255, 0.02)'
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--color-accent, #3b82f6)', padding: '2px 6px', borderRadius: '4px' }}>
+                            {lang === 'vi' ? 'Bản dịch' : 'Translation'}
+                          </span>
+                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Star size={12} fill="var(--color-accent)" color="var(--color-accent)" />
+                            {Number(mat.avg_rating || 0).toFixed(1)} ({mat.ratings_count || 0})
+                          </span>
+                        </div>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: 'var(--text-primary)' }}>
+                          {lang === 'vi' ? 'Người dịch: ' : 'Author: '}
+                          <strong>{isOwner ? (lang === 'vi' ? 'Bạn sở hữu' : 'You own') : (mat.attribution_name || 'Contributor')}</strong>
+                        </p>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)', background: 'rgba(255, 255, 255, 0.05)', padding: '1px 5px', borderRadius: '3px' }}>
+                          {mat.license_type}
+                        </span>
+                      </div>
+                      
+                      <button 
+                        onClick={() => handleSelectExistingTranslation(mat)}
+                        className="btn-primary"
+                        style={{ padding: '8px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer' }}
+                      >
+                        {lang === 'vi' ? 'Sử dụng' : 'Use'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button 
+                onClick={() => {
+                  setShowExistingModal(false);
+                  setExistingTranslations([]);
+                }} 
+                className="btn-secondary"
+              >
+                {lang === 'vi' ? 'Đóng' : 'Close'}
+              </button>
+              
+              <button 
+                onClick={handleForceNewTranslation} 
+                className="btn-primary" 
+                style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' }}
+              >
+                {lang === 'vi' ? 'Dịch mới từ đầu' : 'Translate From Scratch'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Landing License Agreement Modal */}
+      {pendingLicenseMaterial && (
+        <div className="modal-overlay glass">
+          <div className="modal-content glass-panel animate-pop-in license-agreement-modal" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <Lock size={20} className="text-gradient-icon" />
+              <h3>{lang === 'vi' ? 'Điều Khoản Bản Quyền & Truy Cập' : 'Copyright License Agreement'}</h3>
+            </div>
+
+            <div className="modal-body">
+              <p className="intro-text" style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                {lang === 'vi' 
+                  ? `Bản dịch này được chia sẻ bởi ${pendingLicenseMaterial.attribution_name || 'tác giả'} dưới giấy phép bản quyền quốc tế:` 
+                  : `This translation is shared by ${pendingLicenseMaterial.attribution_name || 'author'} under the following international license:`}
+              </p>
+
+              <div className="license-details-box glass" style={{ padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '16px', background: 'rgba(255, 255, 255, 0.01)' }}>
+                <h5 className="license-title" style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 6px 0', color: 'var(--text-primary)' }}>{pendingLicenseMaterial.license_type}</h5>
+                <p className="license-desc" style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 10px 0', lineHeight: 1.4 }}>{getLicenseDescription(pendingLicenseMaterial.license_type)}</p>
+                <div className="license-rules" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div className="rule-item" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    <Check size={12} className="text-success" />
+                    <span>{lang === 'vi' ? 'Luôn luôn ghi công tác giả gốc.' : 'Always give credit to the original creator.'}</span>
+                  </div>
+                  {pendingLicenseMaterial.license_type.includes('NC') && (
+                    <div className="rule-item" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      <Check size={12} className="text-danger" />
+                      <span>{lang === 'vi' ? 'Không sử dụng cho mục đích thương mại.' : 'Do not use for commercial purposes.'}</span>
+                    </div>
+                  )}
+                  {pendingLicenseMaterial.license_type.includes('ND') && (
+                    <div className="rule-item" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      <Check size={12} className="text-danger" />
+                      <span>{lang === 'vi' ? 'Giữ nguyên bản, không chỉnh sửa phái sinh.' : 'Do not modify or adapt the translation.'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="license-agree-checkbox" style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: 'var(--text-primary)', marginBottom: '12px' }}>
+                <input 
+                  type="checkbox" 
+                  id="agreeLandingCheckbox" 
+                  checked={agreedToLandingLicense} 
+                  onChange={(e) => setAgreedToLandingLicense(e.target.checked)} 
+                  style={{ marginTop: '2px' }}
+                />
+                <label htmlFor="agreeLandingCheckbox" style={{ cursor: 'pointer', lineHeight: 1.4 }}>
+                  <strong>{lang === 'vi' ? 'Tôi cam kết tuân thủ đầy đủ điều khoản giấy phép bản quyền nêu trên.' : 'I commit to comply with the license terms specified above.'}</strong>
+                </label>
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setPendingLicenseMaterial(null)} className="btn-secondary">
+                {lang === 'vi' ? 'Quay lại' : 'Back'}
+              </button>
+              <button 
+                onClick={handleConfirmLandingLicense} 
+                disabled={!agreedToLandingLicense} 
+                className="btn-primary"
+              >
+                <span>{lang === 'vi' ? 'Đồng ý & Tải' : 'Agree & Load'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Guide Modal Tour */}
       <GuideModal 

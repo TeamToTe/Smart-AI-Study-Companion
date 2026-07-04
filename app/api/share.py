@@ -39,13 +39,35 @@ async def share_transcript(
         shared_meta = await db_service.create_shared_transcript(
             owner_id=owner_id,
             share_token=share_token,
-            payload=payload
+            payload=payload,
+            user_token=credentials.credentials
         )
         return shared_meta
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create shared transcript: {str(e)}"
+        )
+
+@router.get(
+    "/transcripts",
+    response_model=List[ShareMetadataResponse],
+    summary="List public shared transcripts for a video URL",
+)
+async def list_shared_transcripts(
+    video_url: str,
+    db_service: DatabaseService = Depends()
+):
+    """
+    List all public shared transcripts for a given video URL.
+    """
+    try:
+        shares = await db_service.get_shared_transcripts_by_video_url(video_url)
+        return shares
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list shared transcripts: {str(e)}"
         )
 
 @router.get(
@@ -111,7 +133,8 @@ async def submit_rating(
             shared_transcript_id=shared_transcript["id"],
             user_id=user_id,
             rating=payload.rating,
-            review_comment=payload.review_comment
+            review_comment=payload.review_comment,
+            user_token=credentials.credentials
         )
         return rating_data
     except Exception as e:
@@ -181,7 +204,8 @@ async def clone_shared_transcript(
             original_id=original["id"],
             new_owner_id=user_id,
             new_share_token=new_share_token,
-            original_data=original
+            original_data=original,
+            user_token=credentials.credentials
         )
         await db_service.increment_share_clones(original["id"])
         return cloned_meta

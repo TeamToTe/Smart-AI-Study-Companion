@@ -178,8 +178,8 @@ class DatabaseService:
             except Exception as e:
                 logger.error(f"Error saving glossary term to Supabase: {e}")
 
-    async def create_shared_transcript(self, owner_id: str, share_token: str, payload) -> dict:
-        headers = self._get_headers()
+    async def create_shared_transcript(self, owner_id: str, share_token: str, payload, user_token: Optional[str] = None) -> dict:
+        headers = self._get_headers(user_token)
         headers_with_prefer = headers.copy()
         headers_with_prefer["Prefer"] = "return=representation"
         
@@ -287,8 +287,8 @@ class DatabaseService:
                     current_clones = data[0].get("clones_count", 0)
                     await client.patch(url, headers=headers, json={"clones_count": current_clones + 1})
 
-    async def upsert_transcript_rating(self, shared_transcript_id: str, user_id: str, rating: int, review_comment: Optional[str]) -> dict:
-        headers = self._get_headers()
+    async def upsert_transcript_rating(self, shared_transcript_id: str, user_id: str, rating: int, review_comment: Optional[str], user_token: Optional[str] = None) -> dict:
+        headers = self._get_headers(user_token)
         headers_with_prefer = headers.copy()
         headers_with_prefer["Prefer"] = "return=representation"
         
@@ -333,8 +333,8 @@ class DatabaseService:
             logger.error(f"Failed to fetch ratings. Status: {res.status_code}, Body: {res.text}")
             return []
 
-    async def clone_shared_transcript(self, original_id: str, new_owner_id: str, new_share_token: str, original_data: dict) -> dict:
-        headers = self._get_headers()
+    async def clone_shared_transcript(self, original_id: str, new_owner_id: str, new_share_token: str, original_data: dict, user_token: Optional[str] = None) -> dict:
+        headers = self._get_headers(user_token)
         headers_with_prefer = headers.copy()
         headers_with_prefer["Prefer"] = "return=representation"
         
@@ -380,4 +380,20 @@ class DatabaseService:
                     raise Exception(f"Failed to insert cloned segments in Supabase: {seg_res.text}")
                     
             return created_meta
+
+    async def get_shared_transcripts_by_video_url(self, video_url: str) -> List[dict]:
+        headers = self._get_headers()
+        async with httpx.AsyncClient() as client:
+            url = f"{self.supabase_url}/rest/v1/shared_transcripts"
+            params = {
+                "video_url": f"eq.{video_url}",
+                "is_public": "eq.true",
+                "order": "created_at.desc"
+            }
+            res = await client.get(url, headers=headers, params=params)
+            if res.status_code != 200:
+                logger.error(f"Failed to query shared_transcripts by video_url. Status: {res.status_code}, Body: {res.text}")
+                return []
+            return res.json()
+
 
