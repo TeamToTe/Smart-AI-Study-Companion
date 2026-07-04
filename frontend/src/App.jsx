@@ -906,23 +906,7 @@ export default function App() {
 
         {/* Desktop Controls */}
         <div className="header-controls">
-          {/* Role Switcher Badge for Hackathon Testing */}
-          <div 
-            className={`role-badge-pill ${currentRole}`}
-            onClick={() => {
-              setCurrentRole(currentRole === 'owner' ? 'requester' : 'owner');
-              // Clear current segments if we load a different view or want to show state change
-              window.dispatchEvent(new Event('studymind_notifications_updated'));
-            }}
-            title={lang === 'vi' ? 'Bấm để đổi vai trò kiểm thử' : 'Click to toggle demo role'}
-          >
-            <span className="dot" />
-            <span className="label">
-              {lang === 'vi' 
-                ? `Vai: ${currentRole === 'owner' ? 'Chủ sở hữu' : 'Người yêu cầu'}` 
-                : `Role: ${currentRole === 'owner' ? 'Owner' : 'Requester'}`}
-            </span>
-          </div>
+
 
           {/* Interactive Notifications Bell */}
           <div className="notification-bell-container">
