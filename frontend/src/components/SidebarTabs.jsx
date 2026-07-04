@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageSquare, HelpCircle, Award, Network } from 'lucide-react';
+import { MessageSquare, HelpCircle, Award, Network, Share2 } from 'lucide-react';
 import './SidebarTabs.css';
 
 export default function SidebarTabs({ activeTab, setActiveTab, t, children }) {
@@ -7,7 +7,8 @@ export default function SidebarTabs({ activeTab, setActiveTab, t, children }) {
     { id: 'chat', label: t('tabChat'), icon: <MessageSquare size={16} /> },
     { id: 'flashcards', label: t('tabFlashcards'), icon: <HelpCircle size={16} /> },
     { id: 'quiz', label: t('tabQuiz'), icon: <Award size={16} /> },
-    { id: 'mindmap', label: t('tabMindmap'), icon: <Network size={16} /> }
+    { id: 'mindmap', label: t('tabMindmap'), icon: <Network size={16} /> },
+    { id: 'share', label: t('tabShare'), icon: <Share2 size={16} /> }
   ];
 
   return (
