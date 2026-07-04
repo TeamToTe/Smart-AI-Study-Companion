@@ -38,6 +38,8 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
   const messagesContainerRef = useRef(null);
   const isLoggedIn = !!session?.access_token;
 
+  const charCount = input.length;
+
   // Load chat history when videoUrl or session changes
   useEffect(() => {
     if (!videoUrl || !session?.access_token) {
@@ -288,6 +290,21 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
   const sendMessage = async (textToSend) => {
     if (!textToSend.trim() || loading) return;
 
+    if (textToSend.length > 2000) {
+      const userMsg = {
+        sender: 'user',
+        text: textToSend,
+        time: new Date()
+      };
+      const errorMsg = {
+        sender: 'bot',
+        text: t('wordLimitExceeded'),
+        time: new Date()
+      };
+      setMessages(prev => [...prev, userMsg, errorMsg]);
+      return;
+    }
+
     const newMsg = {
       sender: 'user',
       text: textToSend,
@@ -362,7 +379,7 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || loading || !isLoggedIn) return;
+    if (!input.trim() || loading || !isLoggedIn || charCount > 2000) return;
     const userText = input.trim();
     setInput('');
     await sendMessage(userText);
@@ -410,22 +427,34 @@ export default function RAGChatbot({ segments, onSeek, t, videoUrl, chatQuery, s
       )}
 
       <form onSubmit={handleSend} className="chat-input-form">
-        <input
-          type="text"
-          placeholder={isLoggedIn ? t('askSomethingAboutVideo') : 'Vui lòng đăng nhập để đặt câu hỏi...'}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="chat-input"
-          disabled={!isLoggedIn || loading}
-        />
+        <div className="chat-input-wrapper">
+          <input
+            type="text"
+            placeholder={isLoggedIn ? t('askSomethingAboutVideo') : 'Vui lòng đăng nhập để đặt câu hỏi...'}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            className={`chat-input ${charCount > 2000 ? 'input-error' : ''}`}
+            disabled={!isLoggedIn || loading}
+          />
+          {input.trim() && (
+            <span className={`chat-word-counter ${charCount > 2000 ? 'exceeded' : ''}`}>
+              {charCount} / 2000 {t('wordsCount')}
+            </span>
+          )}
+        </div>
         <button 
           type="submit" 
           className="chat-send-btn btn-primary" 
-          disabled={loading || !input.trim() || !isLoggedIn}
+          disabled={loading || !input.trim() || !isLoggedIn || charCount > 2000}
         >
           <Send size={16} />
         </button>
       </form>
+      {charCount > 2000 && (
+        <div className="chat-input-error-msg">
+          {t('wordLimitExceeded')}
+        </div>
+      )}
     </div>
   );
 }
