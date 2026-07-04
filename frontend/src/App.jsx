@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User, Menu, X, HelpCircle } from 'lucide-react';
+import { BookOpen, Sparkles, Languages, AlertTriangle, ArrowLeft, Trash2, LogIn, LogOut, User, Menu, X, HelpCircle, Bell, BellRing, Check, XCircle, RefreshCw } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import SkeletonLoader from './components/SkeletonLoader';
 import VideoPlayer from './components/VideoPlayer';
@@ -9,6 +9,7 @@ import RAGChatbot from './components/RAGChatbot';
 import FlashcardKit from './components/FlashcardKit';
 import QuizKit from './components/QuizKit';
 import MindmapKit from './components/MindmapKit';
+import SharedMaterialsTab from './components/SharedMaterialsTab';
 import ThemeToggle from './components/ThemeToggle';
 import LanguageToggle from './components/LanguageToggle';
 import { useAuth } from './context/AuthContext';
@@ -49,9 +50,44 @@ export default function App() {
   });
   const [pauseTrigger, setPauseTrigger] = useState(0);
   const [togglePlayTrigger, setTogglePlayTrigger] = useState(0);
-  
+
+  // Role and Shared Materials Mocking State
+  const [currentRole, setCurrentRole] = useState(() => {
+    return localStorage.getItem('studymind_demo_role') || 'requester';
+  });
+  const [notifications, setNotifications] = useState([]);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+
+  // Sync role to localStorage
+  useEffect(() => {
+    localStorage.setItem('studymind_demo_role', currentRole);
+  }, [currentRole]);
+
+  // Load and listen to notifications changes
+  const loadNotifications = () => {
+    const saved = localStorage.getItem('studymind_notifications');
+    if (saved) {
+      setNotifications(JSON.parse(saved));
+    } else {
+      setNotifications([]);
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+    const handleNotiUpdate = () => {
+      loadNotifications();
+    };
+    window.addEventListener('studymind_notifications_updated', handleNotiUpdate);
+    return () => {
+      window.removeEventListener('studymind_notifications_updated', handleNotiUpdate);
+    };
+  }, []);
+
   // Auth state
   const { user, session, signOut, loading: authLoading, isRecovering, setIsRecovering } = useAuth();
+
+  const demoEmail = currentRole === 'owner' ? 'hoang_cs@fpt.edu.vn' : (user?.email || 'learner@fpt.edu.vn');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('signin');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -573,6 +609,76 @@ export default function App() {
     });
   };
 
+  const handleApproveRequest = (requestId, notiId) => {
+    const savedRequests = localStorage.getItem('studymind_material_requests') || '[]';
+    const reqs = JSON.parse(savedRequests);
+    const reqIndex = reqs.findIndex(r => r.id === requestId);
+    if (reqIndex !== -1) {
+      reqs[reqIndex].status = 'approved';
+      localStorage.setItem('studymind_material_requests', JSON.stringify(reqs));
+
+      const savedNotis = localStorage.getItem('studymind_notifications') || '[]';
+      const notis = JSON.parse(savedNotis);
+      notis.push({
+        id: `noti-${Date.now()}`,
+        type: 'request_approved',
+        title: lang === 'vi' ? 'Yêu cầu được phê duyệt!' : 'Request Approved!',
+        message: lang === 'vi' 
+          ? `Chủ sở hữu đã phê duyệt quyền truy cập bản dịch [${reqs[reqIndex].materialLanguage.toUpperCase()}] cho video "${reqs[reqIndex].videoTitle}".`
+          : `The Owner approved access to the [${reqs[reqIndex].materialLanguage.toUpperCase()}] translation for "${reqs[reqIndex].videoTitle}".`,
+        requesterEmail: reqs[reqIndex].requesterEmail,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+
+      const notiIndex = notis.findIndex(n => n.id === notiId);
+      if (notiIndex !== -1) {
+        notis[notiIndex].read = true;
+        notis[notiIndex].status = 'approved';
+      }
+      localStorage.setItem('studymind_notifications', JSON.stringify(notis));
+      window.dispatchEvent(new Event('studymind_notifications_updated'));
+    }
+  };
+
+  const handleRejectRequest = (requestId, notiId) => {
+    const savedRequests = localStorage.getItem('studymind_material_requests') || '[]';
+    const reqs = JSON.parse(savedRequests);
+    const reqIndex = reqs.findIndex(r => r.id === requestId);
+    if (reqIndex !== -1) {
+      reqs[reqIndex].status = 'rejected';
+      localStorage.setItem('studymind_material_requests', JSON.stringify(reqs));
+
+      const savedNotis = localStorage.getItem('studymind_notifications') || '[]';
+      const notis = JSON.parse(savedNotis);
+      notis.push({
+        id: `noti-${Date.now()}`,
+        type: 'request_rejected',
+        title: lang === 'vi' ? 'Yêu cầu bị từ chối' : 'Request Denied',
+        message: lang === 'vi' 
+          ? `Chủ sở hữu từ chối quyền truy cập bản dịch [${reqs[reqIndex].materialLanguage.toUpperCase()}] cho video "${reqs[reqIndex].videoTitle}".`
+          : `The Owner denied access to the [${reqs[reqIndex].materialLanguage.toUpperCase()}] translation for "${reqs[reqIndex].videoTitle}".`,
+        requesterEmail: reqs[reqIndex].requesterEmail,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+
+      const notiIndex = notis.findIndex(n => n.id === notiId);
+      if (notiIndex !== -1) {
+        notis[notiIndex].read = true;
+        notis[notiIndex].status = 'rejected';
+      }
+      localStorage.setItem('studymind_notifications', JSON.stringify(notis));
+      window.dispatchEvent(new Event('studymind_notifications_updated'));
+    }
+  };
+
+  const handleClearNotifications = () => {
+    const cleared = notifications.map(n => ({ ...n, read: true }));
+    localStorage.setItem('studymind_notifications', JSON.stringify(cleared));
+    setNotifications(cleared);
+  };
+
   const handleSeek = (time) => {
     setSeekTime(time);
     setTimeout(() => {
@@ -603,6 +709,108 @@ export default function App() {
 
         {/* Desktop Controls */}
         <div className="header-controls">
+          {/* Role Switcher Badge for Hackathon Testing */}
+          <div 
+            className={`role-badge-pill ${currentRole}`}
+            onClick={() => {
+              setCurrentRole(currentRole === 'owner' ? 'requester' : 'owner');
+              // Clear current segments if we load a different view or want to show state change
+              window.dispatchEvent(new Event('studymind_notifications_updated'));
+            }}
+            title={lang === 'vi' ? 'Bấm để đổi vai trò kiểm thử' : 'Click to toggle demo role'}
+          >
+            <span className="dot" />
+            <span className="label">
+              {lang === 'vi' 
+                ? `Vai: ${currentRole === 'owner' ? 'Chủ sở hữu' : 'Người yêu cầu'}` 
+                : `Role: ${currentRole === 'owner' ? 'Owner' : 'Requester'}`}
+            </span>
+          </div>
+
+          {/* Interactive Notifications Bell */}
+          <div className="notification-bell-container">
+            <button 
+              className={`btn-secondary bell-btn ${notifications.filter(n => !n.read && (currentRole === 'owner' ? n.ownerEmail === demoEmail : n.requesterEmail === demoEmail)).length > 0 ? 'pulse' : ''}`}
+              onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+              title={lang === 'vi' ? 'Thông báo' : 'Notifications'}
+              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, borderRadius: '50%' }}
+            >
+              {notifications.filter(n => !n.read && (currentRole === 'owner' ? n.ownerEmail === demoEmail : n.requesterEmail === demoEmail)).length > 0 ? (
+                <BellRing size={16} className="text-gradient-icon" />
+              ) : (
+                <Bell size={16} />
+              )}
+              {notifications.filter(n => !n.read && (currentRole === 'owner' ? n.ownerEmail === demoEmail : n.requesterEmail === demoEmail)).length > 0 && (
+                <span className="bell-badge-count">
+                  {notifications.filter(n => !n.read && (currentRole === 'owner' ? n.ownerEmail === demoEmail : n.requesterEmail === demoEmail)).length}
+                </span>
+              )}
+            </button>
+
+            {showNotificationsDropdown && (
+              <div className="notifications-dropdown glass animate-pop-in">
+                <div className="noti-dropdown-header">
+                  <h5>{lang === 'vi' ? 'Thông báo' : 'Notifications'}</h5>
+                  <button onClick={handleClearNotifications} className="clear-noti-btn">
+                    {lang === 'vi' ? 'Đánh dấu đã đọc' : 'Mark all read'}
+                  </button>
+                </div>
+
+                <div className="noti-list">
+                  {notifications.filter(n => (currentRole === 'owner' ? n.ownerEmail === demoEmail : n.requesterEmail === demoEmail)).length === 0 ? (
+                    <div className="noti-empty">
+                      <p>{lang === 'vi' ? 'Không có thông báo mới' : 'No new notifications'}</p>
+                    </div>
+                  ) : (
+                    notifications
+                      .filter(n => (currentRole === 'owner' ? n.ownerEmail === demoEmail : n.requesterEmail === demoEmail))
+                      .slice()
+                      .reverse()
+                      .map((noti) => (
+                        <div key={noti.id} className={`noti-item ${noti.read ? 'read' : 'unread'}`}>
+                          <div className="noti-item-content">
+                            <div className="noti-item-header">
+                              <h6>{noti.title}</h6>
+                              <span className="noti-time">
+                                {new Date(noti.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p>{noti.message}</p>
+                            
+                            {/* Action Buttons for Request received by Owner */}
+                            {noti.type === 'request_received' && currentRole === 'owner' && noti.status !== 'approved' && noti.status !== 'rejected' && (
+                              <div className="noti-item-actions">
+                                <button 
+                                  onClick={() => handleApproveRequest(noti.requestId, noti.id)} 
+                                  className="btn-success btn-noti-action"
+                                >
+                                  <Check size={10} />
+                                  <span>{lang === 'vi' ? 'Duyệt' : 'Approve'}</span>
+                                </button>
+                                <button 
+                                  onClick={() => handleRejectRequest(noti.requestId, noti.id)} 
+                                  className="btn-danger btn-noti-action"
+                                >
+                                  <XCircle size={10} />
+                                  <span>{lang === 'vi' ? 'Từ chối' : 'Reject'}</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {noti.status && (
+                              <span className={`noti-status-label ${noti.status}`}>
+                                {noti.status === 'approved' ? (lang === 'vi' ? 'Đã duyệt' : 'Approved') : (lang === 'vi' ? 'Từ chối' : 'Rejected')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           <LanguageToggle lang={lang} setLang={setLang} />
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} t={t} />
           <button 
@@ -765,6 +973,18 @@ export default function App() {
                   </div>
                   <div style={{ display: activeTab === 'mindmap' ? 'block' : 'none', height: '100%' }}>
                     <MindmapKit segments={segments} onSeek={handleSeek} t={t} videoUrl={url} lang={lang} setChatQuery={setChatQuery} setActiveTab={setActiveTab} />
+                  </div>
+                  <div style={{ display: activeTab === 'share' ? 'block' : 'none', height: '100%' }}>
+                    <SharedMaterialsTab 
+                      videoUrl={url} 
+                      videoTitle={pendingWorkspaceData?.title} 
+                      segments={segments} 
+                      currentRole={currentRole} 
+                      userEmail={demoEmail} 
+                      onLoadSegments={(newSegs) => setSegments(newSegs)} 
+                      lang={lang} 
+                      t={t} 
+                    />
                   </div>
                 </SidebarTabs>
               </div>

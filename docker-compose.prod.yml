@@ -64,6 +64,8 @@ services:
     container_name: transcription_frontend_prod
     expose:
       - "80"
+    ports:
+      - "8080:80"
     depends_on:
       - web
     restart: always
