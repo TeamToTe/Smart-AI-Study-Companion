@@ -284,3 +284,250 @@ footer a:hover {
   }
 }
 
+/* ==========================================================================
+   ROLE BADGE & NOTIFICATION STYLES (HACKATHON DEMO)
+   ========================================================================== */
+
+/* Role Switcher Pill Badge */
+.role-badge-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  transition: all 0.25s ease;
+  border: 1px solid var(--border-color);
+  user-select: none;
+  background: var(--bg-secondary);
+}
+
+.role-badge-pill.requester {
+  border-color: rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
+}
+
+.role-badge-pill.requester .dot {
+  background: #8b5cf6;
+  box-shadow: 0 0 8px #8b5cf6;
+}
+
+.role-badge-pill.owner {
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.role-badge-pill.owner .dot {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.role-badge-pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.role-badge-pill:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Notifications Container & Dropdown */
+.notification-bell-container {
+  position: relative;
+  display: inline-block;
+}
+
+.bell-btn.pulse {
+  animation: bell-shake 1.5s ease infinite;
+}
+
+.bell-badge-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  border: 2px solid var(--bg-card);
+  font-size: 9px;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-dropdown {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  width: 320px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 999;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.noti-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 8px;
+}
+
+.noti-dropdown-header h5 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.clear-noti-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.clear-noti-btn:hover {
+  background: rgba(var(--color-accent-rgb), 0.1);
+}
+
+.noti-list {
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.noti-empty {
+  padding: 20px 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.noti-item {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.noti-item.unread {
+  background: rgba(var(--color-accent-rgb), 0.05);
+  border-color: rgba(var(--color-accent-rgb), 0.1);
+}
+
+.noti-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.noti-item-header h6 {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+  max-width: 75%;
+}
+
+.noti-time {
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.noti-item p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0 0 6px 0;
+}
+
+.noti-item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-noti-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s;
+}
+
+.btn-noti-action.btn-success {
+  background: #10b981;
+}
+
+.btn-noti-action.btn-success:hover {
+  background: #059669;
+}
+
+.btn-noti-action.btn-danger {
+  background: #ef4444;
+}
+
+.btn-noti-action.btn-danger:hover {
+  background: #dc2626;
+}
+
+.noti-status-label {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.noti-status-label.approved {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.noti-status-label.rejected {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+@keyframes bell-shake {
+  0%, 100% { transform: rotate(0deg); }
+  10%, 30%, 50%, 70%, 90% { transform: rotate(5deg); }
+  20%, 40%, 60%, 80% { transform: rotate(-5deg); }
+}
+
+
