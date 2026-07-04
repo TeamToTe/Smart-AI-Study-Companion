@@ -418,7 +418,7 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
                         </p>
                       )}
                       {/* Vietnamese Context-aware Translation */}
-                      {(subMode === 'vi' || subMode === 'bilingual') && lang === 'vi' && (
+                      {(subMode === 'vi' || subMode === 'bilingual') && (
                         <p 
                           className="sub-text-vi" 
                           onDoubleClick={(e) => handleSubtitleDoubleClick(e)} 
@@ -428,6 +428,7 @@ export default function SubtitleViewer({ segments, currentTime, onSeek, t, lang,
                           {renderHighlightedText(seg.original_text ? seg.text : getMockTranslation(seg.text), seg.domain_words)}
                         </p>
                       )}
+
                     </>
                   )}
                 </div>
